@@ -47,7 +47,7 @@ function renderCatalog() {
     button.type = "button";
     button.dataset.productId = product.product_id;
     const top = node("div", "card-top");
-    top.append(node("span", `role-badge ${product.role === "benchmark" ? "benchmark" : "transfer"}`, product.role === "benchmark" ? "Benchmark source" : "Transfer case"));
+    top.append(node("span", `role-badge ${product.role === "benchmark" ? "benchmark" : "transfer"}`, product.role === "benchmark" ? "Reference cohort" : "Catalog case"));
     top.append(node("span", "os-label", product.operating_system));
     button.append(top);
     button.append(node("h3", "", product.display_name));
@@ -56,6 +56,35 @@ function renderCatalog() {
     button.append(action);
     button.addEventListener("click", () => loadProduct(product.product_id));
     grid.append(button);
+  });
+}
+
+function renderCatalogStats() {
+  const target = $("catalog-stats");
+  const productCount = state.products.length;
+  const availableCount = state.products.reduce(
+    (total, product) => total + (Number(product.available_review_count) || 0), 0,
+  );
+  const analyzedCount = state.products.reduce(
+    (total, product) => total + (Number(product.reviews_analyzed) || 0), 0,
+  );
+  const brandCount = new Set(state.products.map((product) => product.brand)).size;
+  const operatingSystemCount = new Set(
+    state.products.map((product) => product.operating_system),
+  ).size;
+  const pairCount = productCount * (productCount - 1) / 2;
+  const stats = [
+    [productCount, "featured laptops"],
+    [availableCount || "—", "qualifying reviews collected"],
+    [analyzedCount, "frozen reviews analyzed"],
+    [`${brandCount} · ${operatingSystemCount}`, "brands · operating systems"],
+    [pairCount, "fair head-to-head pairs"],
+  ];
+  target.replaceChildren();
+  stats.forEach(([value, label]) => {
+    const item = node("div", "catalog-stat");
+    item.append(node("strong", "", String(value)), node("span", "", label));
+    target.append(item);
   });
 }
 
@@ -80,6 +109,66 @@ function renderMetrics() {
   });
 }
 
+function formatSampleDate(value) {
+  if (value === null || value === undefined || value === "") return "—";
+  const numeric = Number(value);
+  const date = Number.isFinite(numeric)
+    ? new Date(numeric > 1e12 ? numeric : numeric * 1000)
+    : new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString("en-US", { year: "numeric", month: "short" });
+}
+
+function renderDecisionBrief() {
+  const target = $("decision-brief");
+  target.replaceChildren();
+  const brief = state.report.decision_brief || {};
+  const sample = state.report.sample || {};
+  const sampleSize = sample.reviews_analyzed || "—";
+
+  const addBriefCard = (label, className, findings, emptyText) => {
+    const card = node("article", `brief-card ${className}`);
+    card.append(node("p", "brief-label", label));
+    if (findings?.length) {
+      findings.forEach((finding, index) => {
+        const button = node("button", "brief-finding");
+        button.type = "button";
+        button.append(
+          node("strong", "", formatLabel(finding.issue_group)),
+          node("span", "", `${finding.supporting_review_count} of ${sampleSize} sampled reviews${index ? " · tied" : ""}`),
+          node("small", "", "View source evidence →"),
+        );
+        button.addEventListener("click", () => openEvidence(finding.finding_id));
+        card.append(button);
+      });
+    } else {
+      card.append(node("p", "brief-empty", emptyText));
+    }
+    target.append(card);
+  };
+
+  addBriefCard(
+    "Key strength", "positive", brief.strengths,
+    "No repeated positive pattern met the two-review threshold.",
+  );
+  addBriefCard(
+    "Priority opportunity", "negative", brief.opportunities,
+    "No repeated negative pattern met the two-review threshold.",
+  );
+
+  const context = node("article", "brief-card sample-context");
+  context.append(node("p", "brief-label", "Sample context"));
+  const distribution = sample.rating_distribution || {};
+  const mix = [1, 2, 3, 4, 5].map((star) => `${star}★ ${distribution[String(star)] ?? 0}`).join(" · ");
+  context.append(
+    node("strong", "sample-rating", `${Number(sample.average_rating || 0).toFixed(1)}★ average`),
+    node("span", "", mix),
+    node("span", "", `${formatSampleDate(sample.date_range?.start)} – ${formatSampleDate(sample.date_range?.end)}`),
+    node("small", "", brief.caveat || "Directional convenience sample; inspect evidence before action."),
+  );
+  target.append(context);
+}
+
 function renderFindings() {
   const target = $("findings");
   target.replaceChildren();
@@ -88,8 +177,12 @@ function renderFindings() {
     target.append(node("p", "empty-state", "No taxonomy-backed findings were produced for this cohort."));
     return;
   }
-  const visible = state.showAllFindings ? sorted : sorted.slice(0, 10);
-  visible.forEach((finding) => {
+  const groups = [
+    ["Strengths", sorted.filter((item) => item.sentiment === "positive")],
+    ["Pain points", sorted.filter((item) => item.sentiment === "negative")],
+    ["Other mapped findings", sorted.filter((item) => !["positive", "negative"].includes(item.sentiment))],
+  ];
+  const renderFinding = (finding) => {
     const button = node("button", "finding-row");
     button.type = "button";
     const sentiment = node("span", `sentiment ${finding.sentiment}`, finding.sentiment);
@@ -102,6 +195,12 @@ function renderFindings() {
     button.append(sentiment, body, support, node("span", "chevron", "›"));
     button.addEventListener("click", () => openEvidence(finding.finding_id));
     target.append(button);
+  };
+  groups.forEach(([label, findings]) => {
+    if (!findings.length) return;
+    const visible = state.showAllFindings ? findings : findings.slice(0, 5);
+    target.append(node("h4", "finding-group-title", label));
+    visible.forEach(renderFinding);
   });
   if (sorted.length > 10) {
     const toggle = node(
@@ -161,19 +260,24 @@ async function loadProduct(productId, { scroll = true } = {}) {
     badges.replaceChildren(
       node("span", "soft-badge", formatLabel(report.product.brand)),
       node("span", "soft-badge", report.product.operating_system),
-      node("span", "soft-badge", report.product.role === "benchmark" ? "Benchmark source" : "Transfer demo")
+      node("span", "soft-badge", report.product.role === "benchmark" ? "Reference cohort" : "Catalog case")
     );
-    renderMetrics(); renderFindings(); renderSignals();
+    renderDecisionBrief(); renderMetrics(); renderFindings(); renderSignals();
     $("workspace").hidden = false;
     if (scroll) $("workspace").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (error) { toast(error.message); }
 }
 
-async function openEvidence(findingId) {
+async function openEvidenceFor(productId, findingId, cohortSize = null) {
   try {
-    const payload = await requestJson(`/api/products/${encodeURIComponent(state.activeProduct)}/findings/${encodeURIComponent(findingId)}/evidence`);
+    const cohortQuery = cohortSize ? `?cohort_size=${encodeURIComponent(cohortSize)}` : "";
+    const payload = await requestJson(`/api/products/${encodeURIComponent(productId)}/findings/${encodeURIComponent(findingId)}/evidence${cohortQuery}`);
     $("drawer-title").textContent = formatLabel(payload.finding.issue_group);
-    $("drawer-meta").textContent = `${formatLabel(payload.finding.category)} · ${payload.finding.supporting_review_count} supporting reviews`;
+    const evidenceReviewCount = new Set(payload.evidence.map((item) => item.review_id)).size;
+    const excerptSummary = payload.evidence.length
+      ? `showing ${payload.evidence.length} stored excerpts from ${evidenceReviewCount} review${evidenceReviewCount === 1 ? "" : "s"}`
+      : "no stored excerpt in this comparison prefix";
+    $("drawer-meta").textContent = `${payload.product.display_name} · ${formatLabel(payload.finding.category)} · pattern in ${payload.finding.supporting_review_count} reviews · ${excerptSummary}`;
     const list = $("evidence-list");
     list.replaceChildren();
     payload.evidence.forEach((evidence) => {
@@ -184,10 +288,17 @@ async function openEvidence(findingId) {
       item.append(verified);
       list.append(item);
     });
+    if (!payload.evidence.length) {
+      list.append(node("p", "empty-state", "This mapped comparison signal is verified, but its stored evidence excerpt falls outside the equal-size comparison prefix. Open the full product report to inspect the broader finding."));
+    }
     $("drawer-backdrop").hidden = false;
     $("evidence-drawer").classList.add("open");
     $("evidence-drawer").setAttribute("aria-hidden", "false");
   } catch (error) { toast(error.message); }
+}
+
+async function openEvidence(findingId) {
+  return openEvidenceFor(state.activeProduct, findingId);
 }
 
 function closeEvidence() {
@@ -217,21 +328,203 @@ async function compareProducts() {
     });
     const target = $("comparison-result");
     target.replaceChildren();
+    const [left, right] = comparison.products;
+    const sameBrand = left.product.brand === right.product.brand;
+    const sideLabel = (entry) => sameBrand ? entry.product.display_name : formatLabel(entry.product.brand);
+
+    const overview = node("div", "compare-overview");
     comparison.products.forEach((entry) => {
-      const column = node("article", "compare-column");
+      const column = node("article", "compare-column compare-overview-card");
+      column.append(node("p", "compare-side-label", entry === left ? "PRODUCT ONE" : "PRODUCT TWO"));
       column.append(node("h3", "", entry.product.display_name));
-      const top = [...entry.findings].sort((a, b) => b.supporting_review_count - a.supporting_review_count).slice(0, 5);
-      top.forEach((finding) => column.append(node("p", "compare-finding", `${formatLabel(finding.issue_group)} · ${finding.supporting_review_count}/${comparison.cohort_size_per_product}`)));
-      target.append(column);
+      column.append(node(
+        "p", "compare-sample-note",
+        `${comparison.cohort_size_per_product} reviews · ${formatPercent(entry.coverage.mapped_review_coverage)} finding coverage`,
+      ));
+      const highlights = comparison.highlights?.[entry.product.product_id] || {};
+      const highlightGrid = node("div", "compare-highlight-grid");
+      [
+        ["Key strength", "positive", highlights.strengths?.[0]],
+        ["Top friction", "negative", highlights.pain_points?.[0]],
+      ].forEach(([label, sentiment, finding]) => {
+        const block = node("div", `compare-highlight ${sentiment}`);
+        block.append(node("span", "compare-highlight-label", label));
+        if (finding) {
+          const button = node(
+            "button", "compare-highlight-button",
+            `${formatLabel(finding.issue_group)} · ${finding.supporting_review_count}/${comparison.cohort_size_per_product}`,
+          );
+          button.type = "button";
+          button.addEventListener("click", () => openEvidenceFor(entry.product.product_id, finding.finding_id, comparison.cohort_size_per_product));
+          block.append(button);
+        } else {
+          block.append(node("span", "compare-no-signal", "No mapped signal"));
+        }
+        highlightGrid.append(block);
+      });
+      column.append(highlightGrid);
+      overview.append(column);
     });
+    target.append(overview);
+
+    const takeaways = comparison.takeaways || {};
+    const takeawaySection = node("section", "compare-takeaways");
+    const takeawayHeading = node("div", "compare-takeaway-heading");
+    takeawayHeading.append(
+      node("p", "eyebrow", "WHAT STANDS OUT"),
+      node("p", "compare-threshold-note", `Only gaps of ${takeaways.minimum_gap_reviews || 2}+ reviews are promoted as differentiators.`),
+    );
+    takeawaySection.append(takeawayHeading);
+    const takeawayGrid = node("div", "compare-takeaway-grid");
+
+    const renderDifferentiator = (label, item, sentiment, emptyText) => {
+      const card = node("article", `compare-takeaway-card ${sentiment}`);
+      card.append(node("span", "compare-takeaway-label", label));
+      if (!item) {
+        card.append(node("strong", "", emptyText));
+        return card;
+      }
+      const entry = item.edge === "left" ? left : right;
+      const button = node("button", "compare-takeaway-button");
+      button.type = "button";
+      button.append(
+        node("strong", "", `${sideLabel(entry)} · ${formatLabel(item.issue_group)}`),
+        node("span", "", `${item.gap_reviews} more ${sentiment === "positive" ? "positive" : "friction"} reviews · ${item.left_supporting_review_count}/${comparison.cohort_size_per_product} vs ${item.right_supporting_review_count}/${comparison.cohort_size_per_product}`),
+        node("small", "", "View source evidence →"),
+      );
+      button.addEventListener("click", () => openEvidenceFor(item.product_id, item.finding_id, comparison.cohort_size_per_product));
+      card.append(button);
+      return card;
+    };
+
+    takeawayGrid.append(
+      renderDifferentiator(
+        "Positive differentiator", takeaways.positive_differentiator, "positive",
+        "No positive gap reached the threshold.",
+      ),
+      renderDifferentiator(
+        "Reported friction gap", takeaways.friction_differentiator, "negative",
+        "No friction gap reached the threshold.",
+      ),
+    );
+
+    const shared = takeaways.strongest_shared_pattern;
+    const sharedCard = node("article", "compare-takeaway-card shared");
+    sharedCard.append(node("span", "compare-takeaway-label", "Strongest shared pattern"));
+    if (shared) {
+      sharedCard.append(
+        node("strong", "", `${formatLabel(shared.issue_group)} · ${formatLabel(shared.sentiment)}`),
+        node("span", "", `${shared.left_supporting_review_count}/${comparison.cohort_size_per_product} vs ${shared.right_supporting_review_count}/${comparison.cohort_size_per_product} reviews`),
+      );
+      const sharedLinks = node("div", "compare-shared-links");
+      [[left, shared.left_finding_id], [right, shared.right_finding_id]].forEach(([entry, findingId]) => {
+        const button = node("button", "compare-shared-button", `${sideLabel(entry)} evidence →`);
+        button.type = "button";
+        button.addEventListener("click", () => openEvidenceFor(entry.product.product_id, findingId, comparison.cohort_size_per_product));
+        sharedLinks.append(button);
+      });
+      sharedCard.append(sharedLinks);
+    } else {
+      sharedCard.append(node("strong", "", "No repeated shared pattern met the threshold."));
+    }
+    takeawayGrid.append(sharedCard);
+    takeawaySection.append(takeawayGrid);
+    target.append(takeawaySection);
+
+    const matrix = node("section", "compare-matrix");
+    const matrixHeading = node("div", "compare-matrix-heading");
+    matrixHeading.append(node("div", "", "ISSUE DIMENSION"));
+    matrixHeading.append(node("div", "", sideLabel(left)));
+    matrixHeading.append(node("div", "", sideLabel(right)));
+    matrixHeading.append(node("div", "", "DIRECTIONAL READ"));
+    matrix.append(matrixHeading);
+
+    const renderSignal = (productId, finding, sentiment) => {
+      if (!finding) return node("span", "compare-no-signal", "No mapped signal");
+      const button = node("button", `compare-signal ${sentiment}`);
+      button.type = "button";
+      const top = node("span", "compare-signal-top");
+      top.append(
+        node("span", "compare-signal-sentiment", sentiment),
+        node("strong", "", `${finding.supporting_review_count}/${comparison.cohort_size_per_product}`),
+      );
+      const track = node("span", "compare-bar-track");
+      const fill = node("span", "compare-bar-fill");
+      fill.style.width = `${Math.max(4, Math.round(finding.supporting_review_rate * 100))}%`;
+      track.append(fill);
+      button.append(top, track);
+      button.addEventListener("click", () => openEvidenceFor(productId, finding.finding_id, comparison.cohort_size_per_product));
+      return button;
+    };
+
+    const renderIssueCell = (productId, signals) => {
+      const cell = node("div", "compare-issue-cell");
+      if (signals.positive) cell.append(renderSignal(productId, signals.positive, "positive"));
+      if (signals.negative) cell.append(renderSignal(productId, signals.negative, "negative"));
+      if (!signals.positive && !signals.negative) cell.append(node("span", "compare-no-signal", "No mapped signal"));
+      return cell;
+    };
+
+    const directionalRead = (row) => {
+      const reads = [];
+      const count = (side, sentiment) => row[side]?.[sentiment]?.supporting_review_count || 0;
+      const positiveGap = Math.abs(count("left", "positive") - count("right", "positive"));
+      const negativeGap = Math.abs(count("left", "negative") - count("right", "negative"));
+      if (row.directional_read.positive_edge !== "even" && positiveGap) {
+        const entry = row.directional_read.positive_edge === "left" ? left : right;
+        reads.push(`${sideLabel(entry)} +${positiveGap} positive`);
+      }
+      if (row.directional_read.negative_edge !== "even" && negativeGap) {
+        const entry = row.directional_read.negative_edge === "left" ? left : right;
+        reads.push(`${sideLabel(entry)} +${negativeGap} friction`);
+      }
+      return reads.length ? reads.join(" · ") : "Similar mapped signal";
+    };
+
+    const visibleIssues = (comparison.aligned_issues || []).slice(0, 12);
+    visibleIssues.forEach((row) => {
+      const matrixRow = node("article", "compare-matrix-row");
+      const dimension = node("div", "compare-dimension");
+      dimension.append(
+        node("strong", "", formatLabel(row.issue_group)),
+        node("span", "", formatLabel(row.category)),
+      );
+      matrixRow.append(
+        dimension,
+        renderIssueCell(left.product.product_id, row.left),
+        renderIssueCell(right.product.product_id, row.right),
+        node("p", "compare-read", directionalRead(row)),
+      );
+      matrix.append(matrixRow);
+    });
+    if (!visibleIssues.length) {
+      matrix.append(node("p", "empty-state", "No aligned positive or negative findings were available for this pair."));
+    } else if (comparison.aligned_issues.length > visibleIssues.length) {
+      matrix.append(node("p", "comparison-more", `Showing the 12 strongest aligned dimensions of ${comparison.aligned_issues.length}.`));
+    }
+    target.append(matrix);
     target.append(node("p", "comparison-disclaimer", comparison.disclaimer));
   } catch (error) { toast(error.message); }
 }
 
 async function copyBrief() {
   if (!state.report) return;
-  const top = [...state.findings].sort((a, b) => b.supporting_review_count - a.supporting_review_count).slice(0, 5);
-  const text = [state.report.product.display_name, reportSummary(state.report), "", "Priority findings:", ...top.map((item) => `• ${formatLabel(item.issue_group)} — ${item.supporting_review_count} reviews`), "", "Directional frozen-sample analysis; inspect evidence before action."].join("\n");
+  const brief = state.report.decision_brief || {};
+  const lines = (items, emptyText) => items?.length
+    ? items.map((item) => `• ${formatLabel(item.issue_group)} — ${item.supporting_review_count} reviews`)
+    : [`• ${emptyText}`];
+  const text = [
+    state.report.product.display_name,
+    reportSummary(state.report),
+    "",
+    "Key strength:",
+    ...lines(brief.strengths, "No repeated positive pattern met the threshold."),
+    "",
+    "Priority opportunity:",
+    ...lines(brief.opportunities, "No repeated negative pattern met the threshold."),
+    "",
+    brief.caveat || "Directional frozen-sample analysis; inspect evidence before action.",
+  ].join("\n");
   try { await navigator.clipboard.writeText(text); toast("Decision brief copied"); }
   catch (_) { toast("Clipboard access is unavailable"); }
 }
@@ -240,7 +533,7 @@ async function initialize() {
   try {
     const payload = await requestJson("/api/products");
     state.products = payload.products || [];
-    renderCatalog(); populateCompareSelects();
+    renderCatalog(); renderCatalogStats(); populateCompareSelects();
     if (state.products.length) {
       await loadProduct(state.products[0].product_id, { scroll: false });
     }

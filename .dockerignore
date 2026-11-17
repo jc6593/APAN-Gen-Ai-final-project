@@ -1,7 +1,7 @@
 **
 !app/
 !app/**
-!demo_bundle/
-!demo_bundle/**
+!demo_bundle_v2/
+!demo_bundle_v2/**
 !requirements-api.txt
 !Dockerfile

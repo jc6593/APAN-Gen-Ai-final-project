@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -33,7 +33,11 @@ RepositoryDependency = Annotated[DemoBundleRepository, Depends(get_repository)]
 
 def _default_bundle_dir() -> Path:
     configured = os.environ.get("REVIEWLENS_BUNDLE_DIR")
-    return Path(configured).expanduser().resolve() if configured else PROJECT_ROOT / "demo_bundle"
+    return (
+        Path(configured).expanduser().resolve()
+        if configured
+        else PROJECT_ROOT / "demo_bundle_v2"
+    )
 
 
 def create_app(bundle_dir: str | Path | None = None) -> FastAPI:
@@ -91,11 +95,18 @@ def create_app(bundle_dir: str | Path | None = None) -> FastAPI:
         "/api/products/{product_id}/findings/{finding_id}/evidence",
         tags=["evidence"],
     )
-    def finding_evidence(product_id: str, finding_id: str, repo: RepositoryDependency):
+    def finding_evidence(
+        product_id: str,
+        finding_id: str,
+        repo: RepositoryDependency,
+        cohort_size: int | None = Query(default=None, ge=1),
+    ):
         try:
-            return repo.evidence(product_id, finding_id)
+            return repo.evidence(product_id, finding_id, cohort_size=cohort_size)
         except (ProductNotFoundError, FindingNotFoundError) as exc:
             raise _not_found(exc) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @application.get("/api/products/{product_id}/signals", tags=["findings"])
     def product_signals(product_id: str, repo: RepositoryDependency):

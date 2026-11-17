@@ -1040,7 +1040,11 @@ def freeze_catalog(
         "limitations": [
             "The candidate universe is the configured bounded metadata file, not all laptops.",
             "Reviews are a bounded stream-prefix convenience sample, not a random market sample.",
-            "Thirty to fifty reviews support a course demo and issue discovery, not population claims.",
+            (
+                f"{config.minimum_reviews_per_product} to "
+                f"{config.maximum_reviews_per_product} reviews support a course "
+                "demo and issue discovery, not population claims."
+            ),
             "Only Acer retains the project's formal benchmark status; new products are transfer demos.",
             "Source licensing was not established by this pipeline; do not claim commercial redistribution rights.",
         ],
@@ -1318,8 +1322,155 @@ def run_laptop_catalog_expansion(
     return manifest
 
 
+def promote_laptop_catalog(
+    project_root: str | Path,
+    source_catalog_config: str | Path,
+    target_catalog_config: str | Path,
+) -> dict[str, Any]:
+    """Freeze a new catalog from a verified local catalog checkpoint.
+
+    Promotion is deliberately data-only. It reuses review rows already
+    retained in a completed source checkpoint, applies a new versioned
+    selection contract, and writes into the target catalog's separate output
+    directories. It never opens the remote review stream and never mutates
+    the source catalog.
+    """
+
+    root = _project_root(project_root)
+    source = load_catalog_build_config(root, source_catalog_config)
+    target = load_catalog_build_config(root, target_catalog_config)
+    if source.catalog_id == target.catalog_id:
+        raise CatalogBuildError("source and target catalog_id must differ")
+    if (
+        source.output_directory == target.output_directory
+        or source.generated_config_directory == target.generated_config_directory
+    ):
+        raise CatalogBuildError("promotion target directories must differ from source")
+    if (
+        source.candidate_metadata_jsonl != target.candidate_metadata_jsonl
+        or source.review_repository != target.review_repository
+        or source.review_jsonl_path != target.review_jsonl_path
+    ):
+        raise CatalogBuildError("promotion must retain the same pinned review source")
+    if target.maximum_reviews_per_product > source.maximum_reviews_per_product:
+        raise CatalogBuildError(
+            "promotion cannot recover reviews beyond the source checkpoint cap"
+        )
+    if target.minimum_text_characters < source.minimum_text_characters:
+        raise CatalogBuildError(
+            "promotion cannot relax the source checkpoint text-quality threshold"
+        )
+
+    source_plan = build_candidate_plan(root, source)
+    source_manifest = _verified_existing_manifest(root, source, source_plan)
+    if source_manifest is None:
+        raise CatalogBuildError("source catalog must be frozen before promotion")
+    source_output = _resolve_project_relative(
+        root, source.output_directory, "source output directory"
+    )
+    source_checkpoint_path = source_output / "collection_checkpoint.json"
+    source_plan_path = source_output / "candidate_plan.json"
+    if not source_checkpoint_path.is_file() or not source_plan_path.is_file():
+        raise CatalogBuildError("source catalog plan or checkpoint is missing")
+    try:
+        stored_source_plan = _require_object(
+            json.loads(source_plan_path.read_text(encoding="utf-8")),
+            "source candidate plan",
+        )
+        source_state = _require_object(
+            json.loads(source_checkpoint_path.read_text(encoding="utf-8")),
+            "source collection checkpoint",
+        )
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise CatalogBuildError("source catalog plan or checkpoint is invalid") from exc
+    if stored_source_plan != source_plan:
+        raise CatalogImmutableOutputError("source candidate plan differs from config")
+    source_plan_hash = _sha256_bytes(_canonical_json_bytes(source_plan, indent=2))
+    source_revision = _require_string(
+        source_state.get("source_revision"), "source checkpoint revision"
+    )
+    source_candidates = {
+        row["parent_asin"]: row for row in source_plan["candidate_pool"]
+    }
+    _validate_checkpoint_state(
+        source_state, source, source_plan_hash, source_revision, source_candidates
+    )
+    if source_state.get("status") != "complete":
+        raise CatalogBuildError("source checkpoint must be complete")
+
+    target_plan = build_candidate_plan(root, target)
+    target_output = _resolve_project_relative(
+        root, target.output_directory, "target output directory"
+    )
+    target_plan_payload = _canonical_json_bytes(target_plan, indent=2)
+    _write_immutable(target_output / "candidate_plan.json", target_plan_payload)
+    existing = _verified_existing_manifest(root, target, target_plan)
+    if existing is not None:
+        print("Promoted catalog is already frozen and all hashes were verified.")
+        print("No remote data or models were loaded.")
+        return existing
+
+    target_asins = {
+        str(row["parent_asin"]) for row in target_plan["candidate_pool"]
+    }
+    collected = {
+        str(asin): list(rows)[: target.maximum_reviews_per_product]
+        for asin, rows in source_state.get("collected", {}).items()
+        if asin in target_asins
+    }
+    chosen = _selected_products(target, target_plan["candidate_pool"], collected)
+    if not chosen:
+        counts = sorted(
+            ((asin, len(rows)) for asin, rows in collected.items()),
+            key=lambda item: (-item[1], item[0]),
+        )
+        raise CatalogBuildError(
+            "source checkpoint cannot satisfy the target selection contract; "
+            f"best counts: {counts[:16]}"
+        )
+    target_plan_hash = _sha256_bytes(target_plan_payload)
+    target_state = {
+        "schema_version": CATALOG_CHECKPOINT_SCHEMA_VERSION,
+        "catalog_id": target.catalog_id,
+        "config_sha256": target.config_sha256,
+        "plan_sha256": target_plan_hash,
+        "source_revision": source_revision,
+        "status": "ready_to_freeze",
+        "scanned_records": int(source_state.get("scanned_records", 0)),
+        "source_byte_offset": int(source_state.get("source_byte_offset", 0)),
+        "target_matches": int(source_state.get("target_matches", 0)),
+        "usable_records": sum(len(rows) for rows in collected.values()),
+        "rejected_target_records": int(
+            source_state.get("rejected_target_records", 0)
+        ),
+        "collected": collected,
+        "selected_parent_asins": [row["parent_asin"] for row in chosen],
+    }
+    target_candidates = {
+        row["parent_asin"]: row for row in target_plan["candidate_pool"]
+    }
+    _validate_checkpoint_state(
+        target_state, target, target_plan_hash, source_revision, target_candidates
+    )
+    manifest = freeze_catalog(root, target, target_plan, target_state)
+    print("\n=== LAPTOP CATALOG PROMOTED (LOCAL DATA ONLY) ===")
+    print(
+        f"Source: {source.catalog_id}; target: {target.catalog_id}; "
+        f"remote records read: 0"
+    )
+    for product in manifest["products"]:
+        print(
+            f"  {product['product_id']}: {product['collected_review_count']} reviews | "
+            f"{product['brand']} | {product['operating_system']}"
+        )
+    print(f"Manifest: {target_output / 'catalog_manifest.json'}")
+    print("No remote data or models were loaded.")
+    return manifest
+
+
 __all__ = [
     "CatalogBuildConfig", "CatalogBuildError", "CatalogImmutableOutputError",
     "build_candidate_plan", "classify_laptop_title", "collect_from_records",
-    "freeze_catalog", "load_catalog_build_config", "run_laptop_catalog_expansion",
+    "freeze_catalog", "load_catalog_build_config", "promote_laptop_catalog",
+    "run_laptop_catalog_expansion",
 ]

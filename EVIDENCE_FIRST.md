@@ -197,12 +197,11 @@ The evaluated Acer workflow above remains frozen. A separate laptop transfer
 workflow lets the same Layer 1 and Evidence-first policy analyze preloaded
 laptop product families without writing into any Acer evaluation directory.
 
-To expand beyond the three legacy product configs, run the versioned data-only
-collector. It applies a high-precision whole-device filter, scans all planned
-parent ASINs in one pass, and freezes five new product families only after each
-has at least 30 usable reviews. Together with the three preserved legacy configs,
-this yields eight selectable catalog entries. It resolves and records the exact remote dataset
-revision, checkpoints every 100,000 records, and never loads a model:
+The first versioned data-only collector applied a high-precision whole-device
+filter, scanned all planned parent ASINs in one pass, and froze five product
+families with at least 30 usable reviews. It resolved and recorded the exact
+remote dataset revision, checkpointed every 100,000 records, and never loaded a
+model:
 
 ```bash
 python noteboks/15_review_analysis.py \
@@ -212,10 +211,35 @@ python noteboks/15_review_analysis.py \
 
 The command is resumable with the same command. Frozen collection artifacts
 are written under `data/processed/amazon/laptop_catalog_v1/`; qualified product
-configs are added under `configs/products/`. Existing Acer, HP Chromebook, and
-MacBook Pro configs and outputs are never overwritten. The resulting 30-review
-cohorts are bounded convenience samples for the course demo, not market-share
-or population estimates.
+configs are added under `configs/products/`. Existing configs and outputs are
+never overwritten.
+
+Catalog v2 reuses that verified local checkpoint rather than scanning the
+18,227,164 Electronics records again. It promotes six additional families with
+at least 20 reviews and performs zero remote reads:
+
+```bash
+python noteboks/15_review_analysis.py \
+  --mode laptop-catalog-promote \
+  --source-catalog-config configs/catalogs/laptop_catalog_v1.json \
+  --catalog-config configs/catalogs/laptop_catalog_v2.json
+```
+
+Together with Acer and the five v1 transfer cases, the featured v2 contract has
+twelve products, seven brands, three operating systems, and 549 qualifying
+local reviews. Evidence-first inference deliberately uses 300 frozen display
+reviews: six established 30-review reports plus six new 20-review reports. All
+product comparisons use equal 20-review prefixes. These are bounded convenience
+samples for the course demo, not market-share or population estimates.
+
+Build the twelve-product portable bundle with:
+
+```bash
+python noteboks/15_review_analysis.py \
+  --mode laptop-demo-precompute \
+  --demo-config configs/demo/featured_laptops_v2.json \
+  --show 0
+```
 
 List the locally available products without loading a model:
 

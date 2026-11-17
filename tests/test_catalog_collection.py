@@ -14,6 +14,7 @@ from reviewlens_ef.catalog_collection import (
     collect_from_records,
     freeze_catalog,
     load_catalog_build_config,
+    promote_laptop_catalog,
     run_laptop_catalog_expansion,
 )
 from reviewlens_ef.laptop_products import list_laptop_products
@@ -204,6 +205,117 @@ class CatalogCollectionTests(unittest.TestCase):
             self.root, "configs/catalogs/fixture.json"
         )
         self.assertEqual(manifest, verified)
+
+    def test_promotes_verified_checkpoint_without_remote_scan(self):
+        state = collect_from_records(
+            self.config,
+            self.plan,
+            self._review_stream(),
+            source_revision="fixture-sha",
+        )
+        source_output = self.root / "data/fixture_catalog_v1"
+        source_output.mkdir(parents=True, exist_ok=True)
+        (source_output / "candidate_plan.json").write_text(
+            json.dumps(
+                self.plan, ensure_ascii=False, indent=2, sort_keys=True
+            ) + "\n",
+            encoding="utf-8",
+        )
+        source_manifest = freeze_catalog(
+            self.root, self.config, self.plan, state
+        )
+        source_manifest_bytes = (
+            source_output / "catalog_manifest.json"
+        ).read_bytes()
+
+        target = json.loads(json.dumps(self.config_document))
+        target["catalog_id"] = "fixture_catalog_v2"
+        target["selection"].update({
+            "target_new_products": 5,
+            "minimum_reviews_per_product": 1,
+            "maximum_products_per_brand": 1,
+            "minimum_distinct_brands": 5,
+        })
+        target["output"] = {
+            "directory": "data/fixture_catalog_v2",
+            "generated_config_directory": "configs/products/fixture_catalog_v2",
+            "generated_default_limit": 1,
+        }
+        target_path = self.root / "configs/catalogs/fixture_v2.json"
+        target_path.write_text(json.dumps(target, indent=2), encoding="utf-8")
+
+        promoted = promote_laptop_catalog(
+            self.root,
+            "configs/catalogs/fixture.json",
+            "configs/catalogs/fixture_v2.json",
+        )
+        self.assertEqual("fixture_catalog_v2", promoted["catalog_id"])
+        self.assertEqual(5, len(promoted["products"]))
+        self.assertEqual(
+            5, len({row["brand"] for row in promoted["products"]})
+        )
+        self.assertEqual(
+            source_manifest_bytes,
+            (source_output / "catalog_manifest.json").read_bytes(),
+        )
+        self.assertEqual(
+            [row["product_id"] for row in source_manifest["products"]],
+            [
+                row["product_id"]
+                for row in json.loads(source_manifest_bytes)["products"]
+            ],
+        )
+        second = promote_laptop_catalog(
+            self.root,
+            "configs/catalogs/fixture.json",
+            "configs/catalogs/fixture_v2.json",
+        )
+        self.assertEqual(promoted, second)
+
+    def test_promotion_rejects_tampered_source_checkpoint(self):
+        state = collect_from_records(
+            self.config,
+            self.plan,
+            self._review_stream(),
+            source_revision="fixture-sha",
+        )
+        source_output = self.root / "data/fixture_catalog_v1"
+        source_output.mkdir(parents=True, exist_ok=True)
+        (source_output / "candidate_plan.json").write_text(
+            json.dumps(
+                self.plan, ensure_ascii=False, indent=2, sort_keys=True
+            ) + "\n",
+            encoding="utf-8",
+        )
+        freeze_catalog(self.root, self.config, self.plan, state)
+        checkpoint_path = source_output / "collection_checkpoint.json"
+        checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        first_asin = next(iter(checkpoint["collected"]))
+        checkpoint["collected"][first_asin][0]["rating"] = 99
+        checkpoint_path.write_text(json.dumps(checkpoint), encoding="utf-8")
+
+        target = json.loads(json.dumps(self.config_document))
+        target["catalog_id"] = "fixture_catalog_v2"
+        target["selection"].update({
+            "target_new_products": 5,
+            "minimum_reviews_per_product": 1,
+            "maximum_products_per_brand": 1,
+            "minimum_distinct_brands": 5,
+        })
+        target["output"] = {
+            "directory": "data/fixture_catalog_v2",
+            "generated_config_directory": "configs/products/fixture_catalog_v2",
+            "generated_default_limit": 1,
+        }
+        (self.root / "configs/catalogs/fixture_v2.json").write_text(
+            json.dumps(target, indent=2), encoding="utf-8"
+        )
+        with self.assertRaises(CatalogBuildError):
+            promote_laptop_catalog(
+                self.root,
+                "configs/catalogs/fixture.json",
+                "configs/catalogs/fixture_v2.json",
+            )
 
     def test_resume_skips_prior_lines_and_tamper_is_rejected(self):
         records = self._review_stream()

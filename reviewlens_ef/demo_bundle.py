@@ -145,7 +145,7 @@ def _index_rows(rows: Sequence[Mapping[str, Any]], expected: Sequence[str],
         result[review_id] = row
         order.append(review_id)
     if order != list(expected):
-        raise DemoBundleError(f"{label} must use the same ordered 30-review cohort")
+        raise DemoBundleError(f"{label} must use the same ordered review cohort")
     return result
 
 
@@ -221,20 +221,35 @@ def _public_evidence(product_id: str, review_id: str, review: Mapping[str, Any],
 
 
 def _finding(product_id: str, scope: str, key: tuple[str, str, str],
-             by_review: Mapping[str, list[dict[str, Any]]]) -> dict[str, Any]:
+             by_review: Mapping[str, list[dict[str, Any]]],
+             sample_size: int,
+             sample_order: Sequence[str]) -> dict[str, Any]:
     category, issue_group, sentiment = key
-    review_ids = sorted(by_review)
+    order = {review_id: index for index, review_id in enumerate(sample_order)}
+    review_ids = sorted(by_review, key=lambda review_id: order[review_id])
     evidence: list[dict[str, Any]] = []
     seen: set[str] = set()
+
+    # Prefer breadth: store one excerpt per supporting review before using any
+    # remaining slots for extra quotes from the same review.
     for review_id in review_ids:
         for item in by_review[review_id]:
             if item["evidence_id"] not in seen:
                 evidence.append(item)
                 seen.add(item["evidence_id"])
-            if len(evidence) == MAX_EVIDENCE:
                 break
         if len(evidence) == MAX_EVIDENCE:
             break
+    if len(evidence) < MAX_EVIDENCE:
+        for review_id in review_ids:
+            for item in by_review[review_id]:
+                if item["evidence_id"] not in seen:
+                    evidence.append(item)
+                    seen.add(item["evidence_id"])
+                if len(evidence) == MAX_EVIDENCE:
+                    break
+            if len(evidence) == MAX_EVIDENCE:
+                break
     if not evidence:
         raise DemoBundleError(f"finding {key} has no verified evidence")
     count = len(review_ids)
@@ -248,7 +263,7 @@ def _finding(product_id: str, scope: str, key: tuple[str, str, str],
         "sentiment": sentiment,
         "label": issue_group.replace("_", " ").title(),
         "supporting_review_count": count,
-        "supporting_review_rate": round(count / REVIEWS_PER_PRODUCT, 6),
+        "supporting_review_rate": round(count / sample_size, 6),
         "supporting_review_ids": review_ids,
         "evidence": evidence,
     }
@@ -316,12 +331,35 @@ def _product_document(root: Path, featured: Any,
             f"{product_id}: featured product order does not match its config"
         )
     selected = run.get("selected_review_ids")
-    if not isinstance(selected, list) or len(selected) != REVIEWS_PER_PRODUCT:
-        raise DemoBundleError(f"{product_id}: completed run must select exactly 30 reviews")
-    if len(set(selected)) != REVIEWS_PER_PRODUCT or not all(
+    expected_sample_size = _get(featured, "reviews_to_analyze")
+    if not isinstance(selected, list) or not selected:
+        raise DemoBundleError(f"{product_id}: completed run has no selected reviews")
+    sample_size = len(selected)
+    if (
+        expected_sample_size is not None
+        and expected_sample_size != sample_size
+    ):
+        raise DemoBundleError(
+            f"{product_id}: completed run selected {sample_size} reviews; "
+            f"expected {expected_sample_size}"
+        )
+    if len(set(selected)) != sample_size or not all(
         isinstance(value, str) and value for value in selected
     ):
         raise DemoBundleError(f"{product_id}: invalid selected review IDs")
+    source_config = product_config.get("source")
+    available_review_count = sample_size
+    if isinstance(source_config, Mapping) and source_config.get("reviews_jsonl"):
+        source_reviews_path = _required_file(
+            root,
+            source_config.get("reviews_jsonl"),
+            f"{product_id} source reviews",
+        )
+        available_review_count = len(_read_jsonl(source_reviews_path))
+        if available_review_count < sample_size:
+            raise DemoBundleError(
+                f"{product_id}: source has fewer reviews than the selected sample"
+            )
     reviews_rows = _read_jsonl(reviews_path)
     reviews = _index_rows(reviews_rows, selected, "prepared reviews")
     observations = _index_rows(_read_jsonl(observations_path), selected, "observations")
@@ -400,11 +438,17 @@ def _product_document(root: Path, featured: Any,
                 raise DemoBundleError(f"{review_id}: invalid mapping_status")
 
     findings = [
-        _finding(product_id, "current_product", key, product_groups[key])
+        _finding(
+            product_id, "current_product", key, product_groups[key], sample_size,
+            selected,
+        )
         for key in sorted(product_groups)
     ]
     service_context = [
-        _finding(product_id, "purchase_service", key, service_groups[key])
+        _finding(
+            product_id, "purchase_service", key, service_groups[key], sample_size,
+            selected,
+        )
         for key in sorted(service_groups)
     ]
     findings.sort(key=lambda item: (-item["supporting_review_count"], item["finding_id"]))
@@ -435,7 +479,8 @@ def _product_document(root: Path, featured: Any,
         if isinstance(product_config.get("product_family"), Mapping) else {}
     )
     display_name = (
-        family.get("display_name") or product_config.get("display_name")
+        _get(featured, "presentation_name")
+        or family.get("display_name") or product_config.get("display_name")
         or summary.get("product_name") or summary.get("product_model") or product_id
     )
     role = _product_role(_get(featured, "evaluation_status"))
@@ -455,7 +500,8 @@ def _product_document(root: Path, featured: Any,
             "status": _text(status, "status"),
         },
         "sample": {
-            "reviews_analyzed": REVIEWS_PER_PRODUCT,
+            "reviews_analyzed": sample_size,
+            "available_review_count": available_review_count,
             "review_ids": list(selected),
             "average_rating": round(sum(ratings) / len(ratings), 3),
             "rating_distribution": distribution,
@@ -475,7 +521,7 @@ def _product_document(root: Path, featured: Any,
             "reviews_with_unmapped_signals": len(unmapped_reviews),
             "reviews_with_findings": len(mapped_reviews),
             "reviews_with_other_verified_signals": len(unmapped_reviews),
-            "mapped_review_coverage": round(len(mapped_reviews) / REVIEWS_PER_PRODUCT, 6),
+            "mapped_review_coverage": round(len(mapped_reviews) / sample_size, 6),
             "run_fingerprint": fingerprint,
             "source_sha256": {
                 "config": _file_sha(config_path),
@@ -490,7 +536,7 @@ def _product_document(root: Path, featured: Any,
             "title": f"ReviewLens evidence report: {display_name}",
             "executive_summary": (
                 f"{len(findings)} product finding tuple(s) and {len(signals)} "
-                "additional verified product signal(s) across 30 reviews."
+                f"additional verified product signal(s) across {sample_size} reviews."
             ),
             "top_finding_ids": [item["finding_id"] for item in findings[:3]],
             "signal_ids": [item["signal_id"] for item in signals],
@@ -500,7 +546,7 @@ def _product_document(root: Path, featured: Any,
             ),
         },
         "limitations": [
-            "This fixed 30-review sample is descriptive, not a population estimate.",
+            f"This fixed {sample_size}-review sample is descriptive, not a population estimate.",
             "Transfer quality is not claimed without product-specific blind annotation.",
             "Purchase/service context is excluded from product findings and comparison.",
             "Verified unmapped signals are not forced into the product taxonomy.",
@@ -512,6 +558,18 @@ def _product_document(root: Path, featured: Any,
 def _manifest(demo_config: Any, documents: Sequence[Mapping[str, Any]],
               payloads: Sequence[bytes]) -> dict[str, Any]:
     product_ids = [str(item["product"]["product_id"]) for item in documents]
+    sample_sizes = {
+        str(item["product"]["product_id"]): int(item["sample"]["reviews_analyzed"])
+        for item in documents
+    }
+    unique_sample_sizes = set(sample_sizes.values())
+    comparison_size = int(
+        _get(demo_config, "comparison_reviews_per_product", min(unique_sample_sizes))
+    )
+    if comparison_size < 1 or any(size < comparison_size for size in unique_sample_sizes):
+        raise DemoBundleError(
+            "comparison cohort must be positive and available for every product"
+        )
     version = _text(_get(demo_config, "demo_id"), "demo_id")
     core = {
         "schema_version": MANIFEST_SCHEMA_VERSION,
@@ -526,8 +584,12 @@ def _manifest(demo_config: Any, documents: Sequence[Mapping[str, Any]],
             for product_id, payload in zip(product_ids, payloads)
         ],
         "methodology": {
-            "featured_product_count": FEATURED_PRODUCT_COUNT,
-            "reviews_per_product": REVIEWS_PER_PRODUCT,
+            "featured_product_count": len(product_ids),
+            "reviews_per_product": (
+                next(iter(unique_sample_sizes)) if len(unique_sample_sizes) == 1 else None
+            ),
+            "reviews_per_product_by_id": sample_sizes,
+            "comparison_reviews_per_product": comparison_size,
             "aggregation_unit": "unique review per category/issue_group/sentiment tuple",
             "scope_policy": {
                 "current_product": "included in product findings",
@@ -577,7 +639,7 @@ def build_demo_bundle(
     demo_config: Any,
     product_results: Sequence[Mapping[str, Any]],
 ) -> DemoBundleResult:
-    """Create or idempotently reuse the configured six-product demo bundle.
+    """Create or idempotently reuse a configured multi-product demo bundle.
 
     This function only reads completed run artifacts. It never imports a model
     runtime and never accesses the network.
@@ -585,13 +647,13 @@ def build_demo_bundle(
     root = Path(project_root).resolve()
     if not root.is_dir():
         raise DemoBundleError(f"project_root does not exist: {root}")
-    if _get(demo_config, "reviews_per_product") != REVIEWS_PER_PRODUCT:
-        raise DemoBundleError("demo_config must freeze reviews_per_product at 30")
     featured = _get(demo_config, "products")
     if not isinstance(featured, Sequence) or isinstance(featured, (str, bytes)):
         raise DemoBundleError("demo_config.products must be a sequence")
-    if len(featured) != FEATURED_PRODUCT_COUNT or len(product_results) != FEATURED_PRODUCT_COUNT:
-        raise DemoBundleError("exactly six featured products and results are required")
+    if len(featured) < 2 or len(featured) > 16 or len(product_results) != len(featured):
+        raise DemoBundleError(
+            "demo bundle requires 2-16 featured products with matching results"
+        )
     config_path = _required_file(
         root, _get(demo_config, "config_path"), "featured demo config"
     )
@@ -603,7 +665,7 @@ def build_demo_bundle(
         for product, result in zip(featured, product_results)
     ]
     ids = [str(item["product"]["product_id"]) for item in documents]
-    if len(set(ids)) != FEATURED_PRODUCT_COUNT:
+    if len(set(ids)) != len(featured):
         raise DemoBundleError("featured product IDs must be unique")
     payloads = [_canonical(document) for document in documents]
     manifest = _manifest(demo_config, documents, payloads)
@@ -691,7 +753,7 @@ def _verify_evidence(item: Any, product_id: str) -> None:
 
 
 def _verify_finding(item: Any, product_id: str, review_ids: set[str],
-                    expected_scope: str) -> None:
+                    expected_scope: str, sample_size: int) -> None:
     if not isinstance(item, Mapping) or item.get("scope") != expected_scope:
         raise DemoBundleError(f"{product_id}: invalid finding scope")
     expected_id = _stable_id(
@@ -705,7 +767,7 @@ def _verify_finding(item: Any, product_id: str, review_ids: set[str],
     if (
         not isinstance(support, list) or len(support) != len(set(support))
         or not set(support).issubset(review_ids) or count != len(support)
-        or item.get("supporting_review_rate") != round(len(support) / 30, 6)
+        or item.get("supporting_review_rate") != round(len(support) / sample_size, 6)
     ):
         raise DemoBundleError(f"{product_id}: invalid finding support")
     evidence = item.get("evidence")
@@ -717,7 +779,7 @@ def _verify_finding(item: Any, product_id: str, review_ids: set[str],
         _verify_evidence(row, product_id)
 
 
-def _verify_product(document: Any, product_id: str) -> None:
+def _verify_product(document: Any, product_id: str) -> int:
     required = {
         "schema_version", "product", "sample", "coverage", "findings",
         "signals", "report", "limitations",
@@ -740,15 +802,18 @@ def _verify_product(document: Any, product_id: str) -> None:
     sample = document.get("sample")
     review_list = sample.get("review_ids") if isinstance(sample, Mapping) else None
     distribution = sample.get("rating_distribution") if isinstance(sample, Mapping) else None
+    sample_size = sample.get("reviews_analyzed") if isinstance(sample, Mapping) else None
     if (
-        not isinstance(sample, Mapping) or sample.get("reviews_analyzed") != 30
-        or not isinstance(review_list, list) or len(review_list) != 30
-        or len(set(review_list)) != 30 or not isinstance(distribution, Mapping)
+        not isinstance(sample, Mapping)
+        or isinstance(sample_size, bool) or not isinstance(sample_size, int)
+        or sample_size < 1
+        or not isinstance(review_list, list) or len(review_list) != sample_size
+        or len(set(review_list)) != sample_size or not isinstance(distribution, Mapping)
         or set(distribution) != {"1", "2", "3", "4", "5"}
         or any(not isinstance(value, int) or value < 0 for value in distribution.values())
-        or sum(distribution.values()) != 30
+        or sum(distribution.values()) != sample_size
     ):
-        raise DemoBundleError(f"{product_id}: invalid N=30 sample")
+        raise DemoBundleError(f"{product_id}: invalid product sample")
     review_ids = set(review_list)
     findings = document.get("findings")
     signals = document.get("signals")
@@ -756,11 +821,15 @@ def _verify_product(document: Any, product_id: str) -> None:
     if not isinstance(findings, list) or not isinstance(signals, list):
         raise DemoBundleError(f"{product_id}: findings and signals must be lists")
     for finding in findings:
-        _verify_finding(finding, product_id, review_ids, "current_product")
+        _verify_finding(
+            finding, product_id, review_ids, "current_product", sample_size
+        )
     if not isinstance(report, Mapping) or not isinstance(report.get("service_context"), list):
         raise DemoBundleError(f"{product_id}: invalid report")
     for finding in report["service_context"]:
-        _verify_finding(finding, product_id, review_ids, "purchase_service")
+        _verify_finding(
+            finding, product_id, review_ids, "purchase_service", sample_size
+        )
     for signal in signals:
         if (
             not isinstance(signal, Mapping) or signal.get("review_id") not in review_ids
@@ -786,6 +855,7 @@ def _verify_product(document: Any, product_id: str) -> None:
     if not isinstance(document.get("limitations"), list):
         raise DemoBundleError(f"{product_id}: limitations must be a list")
     _walk_forbidden(document)
+    return sample_size
 
 
 def verify_demo_bundle(
@@ -818,17 +888,19 @@ def verify_demo_bundle(
     entries = manifest.get("products")
     methodology = manifest.get("methodology")
     if (
-        not isinstance(ids, list) or len(ids) != 6 or len(set(ids)) != 6
-        or not isinstance(entries, list) or len(entries) != 6
+        not isinstance(ids, list) or not 2 <= len(ids) <= 16
+        or len(set(ids)) != len(ids)
+        or not isinstance(entries, list) or len(entries) != len(ids)
         or not isinstance(methodology, Mapping) or not methodology
-        or methodology.get("reviews_per_product") != 30
+        or methodology.get("featured_product_count") != len(ids)
         or not isinstance(manifest.get("limitations"), list)
     ):
-        raise DemoBundleError("manifest does not freeze six products at N=30")
+        raise DemoBundleError("manifest does not freeze a valid product catalog")
     entry_ids = [item.get("product_id") if isinstance(item, Mapping) else None for item in entries]
     if entry_ids != ids:
         raise DemoBundleError("featured_product_ids and products differ")
     expected_files = {"manifest.json"}
+    sample_sizes: dict[str, int] = {}
     for product_id, entry in zip(ids, entries):
         if not isinstance(product_id, str) or not _SAFE_ID.fullmatch(product_id):
             raise DemoBundleError("manifest contains an unsafe product_id")
@@ -844,7 +916,27 @@ def verify_demo_bundle(
         document = _read_json(path)
         if path.read_bytes() != _canonical(document):
             raise DemoBundleError(f"{product_id}: product JSON is not canonical")
-        _verify_product(document, product_id)
+        sample_sizes[product_id] = _verify_product(document, product_id)
+    configured_sizes = methodology.get("reviews_per_product_by_id")
+    if configured_sizes is not None and configured_sizes != sample_sizes:
+        raise DemoBundleError("manifest product sample sizes do not match bundle")
+    uniform_size = methodology.get("reviews_per_product")
+    if uniform_size is not None and (
+        isinstance(uniform_size, bool)
+        or not isinstance(uniform_size, int)
+        or any(size != uniform_size for size in sample_sizes.values())
+    ):
+        raise DemoBundleError("manifest uniform sample size is invalid")
+    comparison_size = methodology.get(
+        "comparison_reviews_per_product", uniform_size
+    )
+    if (
+        isinstance(comparison_size, bool)
+        or not isinstance(comparison_size, int)
+        or comparison_size < 1
+        or any(size < comparison_size for size in sample_sizes.values())
+    ):
+        raise DemoBundleError("manifest comparison cohort is invalid")
     actual_files = {
         path.relative_to(output_dir).as_posix()
         for path in output_dir.rglob("*") if path.is_file()

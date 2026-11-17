@@ -1,0 +1,32 @@
+{
+  "catalog_scope": "product_family",
+  "category": "laptop",
+  "output": {
+    "directory": "outputs/laptops/microsoft_surface_laptop_b09h5z36s1"
+  },
+  "product_family": {
+    "allowed_child_asins": [
+      "B07XC2XGR9",
+      "B09F8J8D44",
+      "B09F8XX4NS"
+    ],
+    "display_name": "Microsoft Surface Laptop Studio - 14.4\" Touchscreen - Intel® Core™ i7 - 32GB Memory - 2TB SSD",
+    "model_label": "Microsoft Surface Laptop Studio - 14.4\" Touchscreen - Intel® Core™ i7 - 32GB Memory - 2TB SSD family",
+    "parent_asin": "B09H5Z36S1"
+  },
+  "product_id": "microsoft_surface_laptop_b09h5z36s1",
+  "schema_version": "reviewlens.product_config.v1",
+  "selection": {
+    "default_limit": 20,
+    "pilot_review_ids": [],
+    "seed": 5560,
+    "strategy": "rating_round_robin_v1"
+  },
+  "source": {
+    "reviews_jsonl": "data/processed/amazon/laptop_catalog_v2/products/microsoft_surface_laptop_b09h5z36s1/reviews.jsonl"
+  },
+  "taxonomy": {
+    "config_path": "configs/taxonomies/laptop_v1.json",
+    "schema_version": "reviewlens.taxonomy.laptop.v1"
+  }
+}

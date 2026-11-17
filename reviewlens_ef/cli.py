@@ -21,6 +21,7 @@ def run_mode(
     force_claims=False,
     product_config=None,
     catalog_config=None,
+    source_catalog_config=None,
     demo_config=None,
 ):
     """Dispatch a new mode without importing optional ML dependencies early."""
@@ -31,8 +32,15 @@ def run_mode(
             "--product-config is available only for laptop modes "
             "laptop-pilot and laptop-summary"
         )
-    if catalog_config is not None and mode != "laptop-catalog-expand":
-        raise ValueError("--catalog-config is available only for laptop-catalog-expand")
+    catalog_modes = {"laptop-catalog-expand", "laptop-catalog-promote"}
+    if catalog_config is not None and mode not in catalog_modes:
+        raise ValueError(
+            "--catalog-config is available only for catalog expansion or promotion"
+        )
+    if source_catalog_config is not None and mode != "laptop-catalog-promote":
+        raise ValueError(
+            "--source-catalog-config is available only for laptop-catalog-promote"
+        )
     if demo_config is not None and mode != "laptop-demo-precompute":
         raise ValueError("--demo-config is available only for laptop-demo-precompute")
     if mode == "laptop-demo-precompute":
@@ -42,7 +50,11 @@ def run_mode(
             raise ValueError("--force is not available for laptop-demo-precompute")
         if limit:
             raise ValueError("--limit is fixed by the featured demo config")
-        if product_config is not None or catalog_config is not None:
+        if (
+            product_config is not None
+            or catalog_config is not None
+            or source_catalog_config is not None
+        ):
             raise ValueError(
                 "--product-config and --catalog-config are not used with "
                 "laptop-demo-precompute"
@@ -72,6 +84,31 @@ def run_mode(
         return run_laptop_catalog_expansion(
             project_root=root,
             catalog_config=catalog_config,
+        )
+    if mode == "laptop-catalog-promote":
+        if force_claims:
+            raise ValueError("force_claims is available only for ef-pilot")
+        if force:
+            raise ValueError("--force is not available for laptop-catalog-promote")
+        if limit:
+            raise ValueError("--limit is not available for laptop-catalog-promote")
+        if product_config is not None or demo_config is not None:
+            raise ValueError(
+                "--product-config and --demo-config are not used with "
+                "laptop-catalog-promote"
+            )
+        if catalog_config is None:
+            raise ValueError("--catalog-config is required for laptop-catalog-promote")
+        if source_catalog_config is None:
+            raise ValueError(
+                "--source-catalog-config is required for laptop-catalog-promote"
+            )
+        from .catalog_collection import promote_laptop_catalog
+
+        return promote_laptop_catalog(
+            project_root=root,
+            source_catalog_config=source_catalog_config,
+            target_catalog_config=catalog_config,
         )
     if mode == "laptop-catalog":
         if force_claims:

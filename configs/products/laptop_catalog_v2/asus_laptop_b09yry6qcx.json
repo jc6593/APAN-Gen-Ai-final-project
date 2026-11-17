@@ -1,0 +1,30 @@
+{
+  "catalog_scope": "product_family",
+  "category": "laptop",
+  "output": {
+    "directory": "outputs/laptops/asus_laptop_b09yry6qcx"
+  },
+  "product_family": {
+    "allowed_child_asins": [
+      "B09YRY6QCX"
+    ],
+    "display_name": "ASUS E410 Intel Celeron N4020 4GB 64GB 14-Inch HD LED Win 10 Laptop (Star Black)",
+    "model_label": "ASUS E410 Intel Celeron N4020 4GB 64GB 14-Inch HD LED Win 10 Laptop (Star Black) family",
+    "parent_asin": "B09YRY6QCX"
+  },
+  "product_id": "asus_laptop_b09yry6qcx",
+  "schema_version": "reviewlens.product_config.v1",
+  "selection": {
+    "default_limit": 20,
+    "pilot_review_ids": [],
+    "seed": 5560,
+    "strategy": "rating_round_robin_v1"
+  },
+  "source": {
+    "reviews_jsonl": "data/processed/amazon/laptop_catalog_v2/products/asus_laptop_b09yry6qcx/reviews.jsonl"
+  },
+  "taxonomy": {
+    "config_path": "configs/taxonomies/laptop_v1.json",
+    "schema_version": "reviewlens.taxonomy.laptop.v1"
+  }
+}

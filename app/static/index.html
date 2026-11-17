@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Evidence-traceable laptop review intelligence for product teams.">
   <title>ReviewLens — Evidence-backed product intelligence</title>
-  <link rel="stylesheet" href="/static/styles.css?v=2">
+  <link rel="stylesheet" href="/static/styles.css?v=5">
 </head>
 <body>
   <header class="topbar">
@@ -37,6 +37,7 @@
         </div>
         <p class="section-note">Frozen convenience samples for directional product discovery—not market-wide rankings.</p>
       </div>
+      <div id="catalog-stats" class="catalog-stats" aria-label="Catalog coverage"></div>
       <div id="product-grid" class="product-grid" aria-live="polite"></div>
     </section>
 
@@ -49,6 +50,8 @@
         </div>
         <button id="copy-brief" class="secondary-button" type="button">Copy decision brief</button>
       </div>
+
+      <div id="decision-brief" class="decision-brief" aria-label="Decision brief"></div>
 
       <div id="metrics" class="metrics"></div>
 
@@ -79,6 +82,7 @@
           <p class="eyebrow">DIRECTIONAL · EQUAL SAMPLE</p>
           <h2 id="comparison-title">Compare two products</h2>
         </div>
+        <p class="section-note">Aligned on the same issue dimensions, with positive and negative support kept separate and every signal linked to evidence.</p>
       </div>
       <div class="compare-controls">
         <label>Product one<select id="compare-left"></select></label>
@@ -105,6 +109,6 @@
   <div id="drawer-backdrop" class="drawer-backdrop" hidden></div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="/static/app.js?v=2" defer></script>
+  <script src="/static/app.js?v=5" defer></script>
 </body>
 </html>

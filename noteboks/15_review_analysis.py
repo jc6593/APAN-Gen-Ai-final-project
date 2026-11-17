@@ -1336,7 +1336,8 @@ def main():
         "ef-holdout-prepare", "ef-holdout", "ef-holdout-summary",
         "ef-v15-dev-prepare", "ef-v15-dev",
         "ef-v15-final-prepare", "ef-v15-final", "ef-v15-final-eval",
-        "laptop-catalog", "laptop-catalog-expand", "laptop-pilot", "laptop-summary",
+        "laptop-catalog", "laptop-catalog-expand", "laptop-catalog-promote",
+        "laptop-pilot", "laptop-summary",
         "laptop-demo-precompute",
     ])
     parser.add_argument("--source", choices=["pilot", "full"], default="pilot")
@@ -1350,14 +1351,21 @@ def main():
     parser.add_argument(
         "--catalog-config",
         help=(
-            "Project-relative versioned data contract for laptop-catalog-expand; "
-            "this mode collects data but never loads a model"
+            "Project-relative target data contract for laptop-catalog-expand or "
+            "laptop-catalog-promote; neither mode loads a model"
+        ),
+    )
+    parser.add_argument(
+        "--source-catalog-config",
+        help=(
+            "Project-relative frozen source contract for laptop-catalog-promote; "
+            "the completed local checkpoint is reused without a remote scan"
         ),
     )
     parser.add_argument(
         "--demo-config",
         help=(
-            "Project-relative frozen six-product contract for "
+            "Project-relative frozen featured-product contract for "
             "laptop-demo-precompute"
         ),
     )
@@ -1395,10 +1403,22 @@ def main():
         parser.error(f"--product-config is required with --mode {args.mode}")
     if args.product_config and args.mode not in laptop_config_modes:
         parser.error("--product-config is available only with laptop-pilot or laptop-summary")
-    if args.mode == "laptop-catalog-expand" and not args.catalog_config:
-        parser.error("--catalog-config is required with --mode laptop-catalog-expand")
-    if args.catalog_config and args.mode != "laptop-catalog-expand":
-        parser.error("--catalog-config is available only with laptop-catalog-expand")
+    catalog_modes = {"laptop-catalog-expand", "laptop-catalog-promote"}
+    if args.mode in catalog_modes and not args.catalog_config:
+        parser.error(f"--catalog-config is required with --mode {args.mode}")
+    if args.catalog_config and args.mode not in catalog_modes:
+        parser.error(
+            "--catalog-config is available only with laptop-catalog-expand or "
+            "laptop-catalog-promote"
+        )
+    if args.mode == "laptop-catalog-promote" and not args.source_catalog_config:
+        parser.error(
+            "--source-catalog-config is required with --mode laptop-catalog-promote"
+        )
+    if args.source_catalog_config and args.mode != "laptop-catalog-promote":
+        parser.error(
+            "--source-catalog-config is available only with laptop-catalog-promote"
+        )
     if args.mode == "laptop-demo-precompute" and not args.demo_config:
         parser.error("--demo-config is required with --mode laptop-demo-precompute")
     if args.demo_config and args.mode != "laptop-demo-precompute":
@@ -1431,7 +1451,8 @@ def main():
         "ef-holdout-prepare", "ef-holdout", "ef-holdout-summary",
         "ef-v15-dev-prepare", "ef-v15-dev",
         "ef-v15-final-prepare", "ef-v15-final", "ef-v15-final-eval",
-        "laptop-catalog", "laptop-catalog-expand", "laptop-pilot", "laptop-summary",
+        "laptop-catalog", "laptop-catalog-expand", "laptop-catalog-promote",
+        "laptop-pilot", "laptop-summary",
         "laptop-demo-precompute",
     }:
         # Running this file directly places noteboks/, rather than the project
@@ -1456,6 +1477,7 @@ def main():
             nli_batch_size=args.nli_batch_size,
             product_config=args.product_config,
             catalog_config=args.catalog_config,
+            source_catalog_config=args.source_catalog_config,
             demo_config=args.demo_config,
         )
 

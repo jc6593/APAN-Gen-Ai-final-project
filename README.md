@@ -14,31 +14,36 @@ cohort, and what evidence supports each conclusion?*
 
 ## Product experience
 
-The demo supports this workflow:
+The v2 demo supports this workflow:
 
-1. Choose one of six featured laptop product families.
+1. Choose one of twelve featured laptop product families across seven brands
+   and three operating systems.
 2. Review its sample, coverage, and evidence-backed executive brief.
 3. Rank product findings by the number of distinct supporting reviews.
 4. Open any finding to inspect the exact quotes, review IDs, and ratings.
 5. Inspect verified signals that the system deliberately did not force into the
    business taxonomy.
-6. Compare two products on equal 30-review cohorts and copy a concise decision
-   brief.
+6. Compare any pair on equal frozen 20-review cohorts. The comparison aligns
+   the same issue dimensions, separates strengths from friction, summarizes
+   only material two-review gaps, and links every signal back to evidence.
 
-The six featured cases are:
+The twelve featured cases are:
 
 - Acer Aspire 5 Slim Laptop — benchmark source product
-- Apple 2022 MacBook Air
-- Apple 2021 MacBook Pro
+- Apple MacBook Air M2 (2022) and MacBook Pro 16 (2021)
+- Microsoft Surface Laptop 3 and Surface Laptop Studio
+- HP 14 Ryzen 5
+- ASUS E410 and ROG Strix SCAR 17
+- Dell Inspiron 13 5000 2-in-1
 - Acer Chromebook Spin 13 Convertible
-- HP 14 Laptop (Ryzen 5)
-- Lenovo IdeaPad G50
+- Lenovo IdeaPad G50 and B50 Business
 
-Every displayed product uses a frozen 30-review convenience sample. The Acer
-Aspire 5 supplied the domain-development and internal-evaluation setting, but
-its 30-review demo cohort was not separately evaluated. The other five products
-are transfer demonstrations; product-specific accuracy has not been
-established for them.
+The six established cases retain their frozen 30-review reports; six additional
+cases use frozen 20-review reports. Every head-to-head comparison recomputes
+support on the same first 20 selected reviews per product. The Acer Aspire 5
+supplied the domain-development and internal-evaluation setting, but its display
+cohort was not separately evaluated. The other eleven products are transfer
+demonstrations; product-specific accuracy has not been established for them.
 
 ## Why this is more than an off-the-shelf prompt
 
@@ -78,10 +83,10 @@ The project deliberately separates two runtime profiles.
 
 ### Offline precomputation (Apple Silicon / local MLX)
 
-The batch pipeline loads Layer 1 once, completes all six products, releases it,
+The batch pipeline loads Layer 1 once, completes all twelve products, releases it,
 then loads Layer 2 once. This keeps only one model family resident at a time and
 is appropriate for the 24 GB M4 Pro development machine. It writes immutable,
-fingerprinted product runs and then creates the portable `demo_bundle/`.
+fingerprinted product runs and then creates the portable `demo_bundle_v2/`.
 
 Pinned models:
 
@@ -89,7 +94,7 @@ Pinned models:
 - Layer 2: `mlx-community/Qwen3-4B-Instruct-2507-4bit`
 
 The exact Hugging Face revisions are frozen in
-`configs/demo/featured_laptops_v1.json`. Layer 1 also requires the existing
+`configs/demo/featured_laptops_v2.json`. Layer 1 also requires the existing
 local adapter and checkpoint under `outputs/adapters/reviewlens_layers16/`.
 
 ### Portable serving (FastAPI / Docker)
@@ -110,13 +115,14 @@ python -m unittest \
   tests.test_api \
   tests.test_demo_bundle \
   tests.test_laptop_batch \
-  tests.test_laptop_cli -v
+  tests.test_laptop_cli \
+  tests.test_shipped_demo_bundle -v
 python -m compileall reviewlens_ef app noteboks/15_review_analysis.py
 ```
 
 These tests run from a lightweight repository clone and do not load an ML
 model. Developers who also have the ignored local datasets and historical
-outputs can run the complete 122-test suite:
+outputs can run the complete test suite:
 
 ```bash
 python -m unittest discover -s tests -v
@@ -131,16 +137,27 @@ Face cache.
 ```bash
 python noteboks/15_review_analysis.py \
   --mode laptop-demo-precompute \
-  --demo-config configs/demo/featured_laptops_v1.json
+  --demo-config configs/demo/featured_laptops_v2.json \
+  --show 0
 ```
 
 The command is append-and-resume: rerunning it reuses valid ordered caches and
-processes only missing work. Do not use a force flag. The resulting
-`demo_bundle/manifest.json` binds every product report to a SHA-256 hash.
+processes only missing work. Do not pass `--limit` or `--force`. With the
+existing six products cached, only the six new 20-review products require model
+work. The resulting `demo_bundle_v2/manifest.json` binds every product report
+to a SHA-256 hash.
+
+The verified v2 bundle is the API and Docker default. To serve a different
+bundle during development, set `REVIEWLENS_BUNDLE_DIR` explicitly:
+
+```bash
+REVIEWLENS_BUNDLE_DIR=demo_bundle_v2 \
+  uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
 
 ### 3. Run the API locally
 
-After `demo_bundle/` exists:
+After `demo_bundle_v2/` exists:
 
 ```bash
 python -m unittest discover -s tests -p 'test_api.py' -v
@@ -158,7 +175,8 @@ directory before starting Uvicorn.
 
 ### 4. Run with Docker
 
-Build the bundle first, then build and start the portable serving image:
+The Docker image packages only the small, hash-verified v2 serving bundle. Build
+and run it with:
 
 ```bash
 docker build -t reviewlens .
@@ -170,7 +188,17 @@ In another terminal, smoke-test the running container:
 ```bash
 curl http://localhost:8000/health
 curl http://localhost:8000/api/products
+curl -X POST http://localhost:8000/api/compare \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "left_product_id": "acer_aspire5",
+    "right_product_id": "dell_inspiron_b077xx31vl"
+  }'
 ```
+
+The health response should report `featured_laptops_v2` and
+`"product_count":12`; the comparison should report
+`"cohort_size_per_product":20`.
 
 The container is the serving layer only; model inference remains an offline
 precomputation step. The image should be built and smoke-tested on the target
@@ -206,12 +234,21 @@ curl -X POST http://localhost:8000/api/compare \
   sentiment data.
 - **Product-review source:** McAuley Lab Amazon Reviews 2023 Electronics data.
 - **Existing Acer source:** 189 cleaned Acer Aspire 5 reviews remain preserved.
-- **Featured display cohorts:** six deterministic, rating-aware samples of 30
-  reviews each.
+- **Catalog discovery:** 18,227,164 Electronics records were screened once to
+  locate suitable product families; this is not a claim that all records were
+  analyzed by the language models.
+- **Qualified local pool:** 549 reviews across the twelve featured families.
+- **Evidence-first display cohorts:** 300 deterministic, rating-aware reviews
+  (six products at 30 reviews and six at 20).
+- **Fair comparisons:** all 66 product pairs use equal frozen 20-review
+  prefixes.
 
-The five transfer-product families were selected from a bounded product catalog
-with brand and operating-system diversity constraints. The samples are useful
-for a course demonstration, not for estimating market prevalence or customer
+The transfer-product families were selected from bounded product catalogs with
+brand and operating-system diversity constraints. The data funnel is
+intentional: broad records support discovery, the qualified pool supports
+auditable product selection, and the smaller frozen cohorts keep local MLX
+inference reproducible and comparison-balanced. These samples are useful for a
+course demonstration, not for estimating market prevalence or customer
 population shares.
 
 ## Evidence-first method
@@ -244,8 +281,8 @@ decision is therefore a **precision-recall trade-off**, not an overall model
 win. Raw numerators and denominators are reported because the cohort is too
 small for significance or population-level claims.
 
-That evaluation does not establish accuracy for the five transfer products, or
-for the separate 30-review Acer display cohort. The interface labels these
+That evaluation does not establish accuracy for the eleven transfer products,
+or for the separate Acer display cohort. The interface labels these
 cases accordingly and presents comparisons as directional only.
 
 The immutable evaluation summary and its selection, run, and completion
@@ -272,7 +309,7 @@ excluded from the portable repository.
 ```text
 app/                    FastAPI service and static product interface
 configs/catalogs/       Versioned catalog-collection contract
-configs/demo/           Frozen six-product demo contract
+configs/demo/           Frozen v1 and twelve-product v2 demo contracts
 configs/products/       Product-family definitions
 configs/taxonomies/     Frozen laptop business taxonomy
 data/                   Local-only SemEval and prepared Amazon review data
@@ -280,7 +317,7 @@ docs/evaluation/        Frozen internal-validation summary and manifests
 noteboks/               Preserved historical analysis entry points
 reviewlens_ef/           Evidence-first, catalog, batch, and bundle modules
 tests/                  Deterministic unit and integration tests
-demo_bundle/            Generated portable API data (after precomputation)
+demo_bundle*/           Generated portable API data (after precomputation)
 ```
 
 The directory name `noteboks/` is intentionally preserved for compatibility

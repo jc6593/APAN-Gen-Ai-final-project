@@ -184,6 +184,51 @@ class LaptopStageTests(unittest.TestCase):
 
 
 class FeaturedBatchTests(unittest.TestCase):
+    def test_v2_config_supports_variable_report_samples_and_equal_comparison(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            product_dir = root / "configs/products"
+            product_dir.mkdir(parents=True)
+            products = []
+            for index, sample_size in enumerate((30, 20), 1):
+                path = product_dir / f"product_{index}.json"
+                path.write_text("{}", encoding="utf-8")
+                products.append({
+                    "config_path": path.relative_to(root).as_posix(),
+                    "brand": f"Brand {index}",
+                    "operating_system": "Windows",
+                    "evaluation_status": (
+                        "benchmark_source_product" if index == 1 else "transfer_demo"
+                    ),
+                    "cohort_status": "directional_demo",
+                    "presentation_name": f"Laptop {index}",
+                    "reviews_to_analyze": sample_size,
+                })
+            config_path = root / "configs/demo/v2.json"
+            config_path.parent.mkdir(parents=True)
+            config_path.write_text(json.dumps({
+                "schema_version": "reviewlens.featured_demo_config.v2",
+                "demo_id": "fixture_v2",
+                "maximum_reviews_per_product": 30,
+                "comparison_reviews_per_product": 20,
+                "models": {
+                    "layer1": {"model_id": "l1", "revision": "1" * 40},
+                    "layer2": {"model_id": "l2", "revision": "2" * 40},
+                },
+                "products": products,
+                "max_retries": 1,
+                "bundle_output_directory": "demo_bundle_v2",
+            }), encoding="utf-8")
+
+            loaded = laptop_batch.load_featured_demo_config(
+                root, config_path.relative_to(root)
+            )
+
+        self.assertEqual(30, loaded.reviews_per_product)
+        self.assertEqual(20, loaded.comparison_reviews_per_product)
+        self.assertEqual([30, 20], [p.reviews_to_analyze for p in loaded.products])
+        self.assertEqual("Laptop 2", loaded.products[1].presentation_name)
+
     def test_two_products_share_one_model_per_layer_and_finish_layer1_first(self):
         events = []
         products = tuple(

@@ -1,0 +1,31 @@
+{
+  "catalog_scope": "product_family",
+  "category": "laptop",
+  "output": {
+    "directory": "outputs/laptops/asus_rog_b07v7k96my"
+  },
+  "product_family": {
+    "allowed_child_asins": [
+      "B07BP9G913",
+      "B07RTNG5FJ"
+    ],
+    "display_name": "ASUS ROG Strix SCAR Edition GL703GE Gaming Laptop, 17.3” 120Hz Full HD 3ms, 8th Gen Intel Core",
+    "model_label": "ASUS ROG Strix SCAR Edition GL703GE Gaming Laptop, 17.3” 120Hz Full HD 3ms, 8th Gen Intel Core family",
+    "parent_asin": "B07V7K96MY"
+  },
+  "product_id": "asus_rog_b07v7k96my",
+  "schema_version": "reviewlens.product_config.v1",
+  "selection": {
+    "default_limit": 20,
+    "pilot_review_ids": [],
+    "seed": 5560,
+    "strategy": "rating_round_robin_v1"
+  },
+  "source": {
+    "reviews_jsonl": "data/processed/amazon/laptop_catalog_v2/products/asus_rog_b07v7k96my/reviews.jsonl"
+  },
+  "taxonomy": {
+    "config_path": "configs/taxonomies/laptop_v1.json",
+    "schema_version": "reviewlens.taxonomy.laptop.v1"
+  }
+}

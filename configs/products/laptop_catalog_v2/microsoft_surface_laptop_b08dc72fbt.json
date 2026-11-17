@@ -1,0 +1,37 @@
+{
+  "catalog_scope": "product_family",
+  "category": "laptop",
+  "output": {
+    "directory": "outputs/laptops/microsoft_surface_laptop_b08dc72fbt"
+  },
+  "product_family": {
+    "allowed_child_asins": [
+      "B07YNJRGF9",
+      "B07YNJX8HM",
+      "B07YNK3H6P",
+      "B07YNK81F8",
+      "B07YNKDLQB",
+      "B07YNKTF6N",
+      "B07YNLK9LX",
+      "B07YNLK9LY"
+    ],
+    "display_name": "Microsoft Surface Laptop 3 – 13.5\" Touch-Screen – Intel Core i7 - 16GB Memory - 256GB Solid",
+    "model_label": "Microsoft Surface Laptop 3 – 13.5\" Touch-Screen – Intel Core i7 - 16GB Memory - 256GB Solid family",
+    "parent_asin": "B08DC72FBT"
+  },
+  "product_id": "microsoft_surface_laptop_b08dc72fbt",
+  "schema_version": "reviewlens.product_config.v1",
+  "selection": {
+    "default_limit": 20,
+    "pilot_review_ids": [],
+    "seed": 5560,
+    "strategy": "rating_round_robin_v1"
+  },
+  "source": {
+    "reviews_jsonl": "data/processed/amazon/laptop_catalog_v2/products/microsoft_surface_laptop_b08dc72fbt/reviews.jsonl"
+  },
+  "taxonomy": {
+    "config_path": "configs/taxonomies/laptop_v1.json",
+    "schema_version": "reviewlens.taxonomy.laptop.v1"
+  }
+}

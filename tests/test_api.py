@@ -41,6 +41,10 @@ def _product_document(
         "sample": {
             "reviews_analyzed": 2,
             "available_review_count": 12,
+            "review_ids": [
+                f"{product_id}_review_001",
+                f"{product_id}_review_002",
+            ],
             "rating_distribution": {"1": 0, "2": 0, "3": 1, "4": 0, "5": 1},
         },
         "coverage": {
@@ -56,6 +60,7 @@ def _product_document(
                 "issue_group": "slow_startup",
                 "sentiment": "negative",
                 "supporting_review_count": 1,
+                "supporting_review_ids": [f"{product_id}_review_001"],
                 "supporting_review_rate": 0.5,
                 "evidence": [
                     {
@@ -133,6 +138,7 @@ def _write_bundle(
         "products": entries,
         "methodology": {
             "runtime": "frozen_precomputed_results",
+            "comparison_reviews_per_product": 2,
             "pipeline": [
                 "layer_1_review_filtering",
                 "atomic_observation_extraction",
@@ -185,6 +191,10 @@ class ReviewLensApiTests(unittest.TestCase):
             evidence = client.get(
                 f"/api/products/alpha_laptop/findings/{finding_id}/evidence"
             )
+            comparison_evidence = client.get(
+                f"/api/products/alpha_laptop/findings/{finding_id}/evidence",
+                params={"cohort_size": 1},
+            )
             signals = client.get("/api/products/alpha_laptop/signals")
             methodology = client.get("/api/methodology")
 
@@ -193,10 +203,57 @@ class ReviewLensApiTests(unittest.TestCase):
         self.assertNotIn("evidence", findings.json()["findings"][0])
         self.assertEqual(findings.json()["findings"][0]["evidence_count"], 1)
         self.assertTrue(evidence.json()["evidence"][0]["exact_source_verified"])
+        self.assertEqual(
+            comparison_evidence.json()["finding"]["supporting_review_count"], 1
+        )
+        self.assertEqual(comparison_evidence.json()["cohort_size"], 1)
         self.assertEqual(len(signals.json()["signals"]), 1)
         self.assertEqual(
             methodology.json()["schema_version"], "reviewlens.demo_bundle.v1"
         )
+
+    def test_report_derives_repeated_strengths_and_tied_opportunities(self) -> None:
+        def add_business_patterns(product: dict[str, Any]) -> None:
+            base = product["findings"][0]
+            base["supporting_review_count"] = 2
+            base["supporting_review_ids"] = [
+                "alpha_laptop_review_001", "alpha_laptop_review_002"
+            ]
+            base["supporting_review_rate"] = 1.0
+            product["findings"].extend([
+                {
+                    **base,
+                    "finding_id": "alpha_laptop_finding_strength",
+                    "category": "display",
+                    "issue_group": "screen_quality",
+                    "sentiment": "positive",
+                },
+                {
+                    **base,
+                    "finding_id": "alpha_laptop_finding_battery",
+                    "category": "battery",
+                    "issue_group": "battery_runtime",
+                },
+            ])
+
+        with tempfile.TemporaryDirectory() as directory:
+            bundle = _write_bundle(
+                Path(directory), product_mutator=add_business_patterns
+            )
+            with TestClient(create_app(bundle)) as client:
+                payload = client.get("/api/products/alpha_laptop/report").json()
+
+        brief = payload["decision_brief"]
+        self.assertEqual(brief["minimum_supporting_reviews"], 2)
+        self.assertEqual(
+            [item["issue_group"] for item in brief["strengths"]],
+            ["screen_quality"],
+        )
+        self.assertEqual(
+            [item["issue_group"] for item in brief["opportunities"]],
+            ["battery_runtime", "slow_startup"],
+        )
+        self.assertIn("n=2", brief["caveat"])
 
     def test_compare_is_equal_sample_and_directional(self) -> None:
         with TestClient(create_app(self.bundle)) as client:
@@ -216,9 +273,138 @@ class ReviewLensApiTests(unittest.TestCase):
             )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["comparison_type"], "directional_equal_sample")
-        self.assertEqual(response.json()["cohort_size_per_product"], 2)
+        payload = response.json()
+        self.assertEqual(payload["comparison_type"], "directional_equal_sample")
+        self.assertEqual(payload["cohort_size_per_product"], 2)
+        self.assertEqual(len(payload["products"]), 2)
+        self.assertEqual(payload["products"][0]["sample"]["reviews_analyzed"], 2)
+        self.assertEqual(len(payload["aligned_issues"]), 1)
+        aligned = payload["aligned_issues"][0]
+        self.assertEqual(aligned["category"], "performance")
+        self.assertEqual(aligned["issue_group"], "slow_startup")
+        self.assertEqual(
+            aligned["left"]["negative"]["finding_id"],
+            "alpha_laptop_finding_001",
+        )
+        self.assertEqual(
+            aligned["right"]["negative"]["finding_id"],
+            "beta_laptop_finding_001",
+        )
+        self.assertEqual(aligned["directional_read"]["negative_edge"], "even")
+        # One-review anecdotes stay in the matrix but are not promoted into
+        # executive highlights or takeaways.
+        self.assertEqual(payload["highlights"]["alpha_laptop"]["pain_points"], [])
+        self.assertEqual(payload["highlights"]["alpha_laptop"]["strengths"], [])
+        self.assertIsNone(payload["takeaways"]["positive_differentiator"])
+        self.assertIsNone(payload["takeaways"]["friction_differentiator"])
+        self.assertIsNone(payload["takeaways"]["strongest_shared_pattern"])
         self.assertEqual(same_product.status_code, 422)
+
+    def test_compare_promotes_only_repeated_material_differences(self) -> None:
+        product_paths = {
+            product_id: self.bundle / "products" / f"{product_id}.json"
+            for product_id in ("alpha_laptop", "beta_laptop")
+        }
+        documents = {
+            product_id: json.loads(path.read_text(encoding="utf-8"))
+            for product_id, path in product_paths.items()
+        }
+        for product_id, document in documents.items():
+            base = document["findings"][0]
+            base["supporting_review_count"] = 2
+            base["supporting_review_ids"] = [
+                f"{product_id}_review_001", f"{product_id}_review_002"
+            ]
+            base["supporting_review_rate"] = 1.0
+        alpha_base = documents["alpha_laptop"]["findings"][0]
+        documents["alpha_laptop"]["findings"].append({
+            **alpha_base,
+            "finding_id": "alpha_laptop_finding_display_positive",
+            "category": "display",
+            "issue_group": "screen_quality",
+            "sentiment": "positive",
+        })
+
+        manifest_path = self.bundle / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        for product_id, document in documents.items():
+            payload = _json_bytes(document)
+            product_paths[product_id].write_bytes(payload)
+            for entry in manifest["products"]:
+                if entry["product_id"] == product_id:
+                    entry["sha256"] = hashlib.sha256(payload).hexdigest()
+        manifest_path.write_bytes(_json_bytes(manifest))
+
+        with TestClient(create_app(self.bundle)) as client:
+            payload = client.post(
+                "/api/compare",
+                json={
+                    "left_product_id": "alpha_laptop",
+                    "right_product_id": "beta_laptop",
+                },
+            ).json()
+
+        positive = payload["takeaways"]["positive_differentiator"]
+        self.assertEqual(positive["product_id"], "alpha_laptop")
+        self.assertEqual(positive["gap_reviews"], 2)
+        self.assertEqual(positive["issue_group"], "screen_quality")
+        shared = payload["takeaways"]["strongest_shared_pattern"]
+        self.assertEqual(shared["issue_group"], "slow_startup")
+        self.assertEqual(shared["sentiment"], "negative")
+        self.assertIsNone(payload["takeaways"]["friction_differentiator"])
+        self.assertEqual(
+            payload["highlights"]["alpha_laptop"]["strengths"][0][
+                "issue_group"
+            ],
+            "screen_quality",
+        )
+
+    def test_compare_recomputes_an_unequal_source_pair_on_frozen_prefixes(self) -> None:
+        beta_path = self.bundle / "products" / "beta_laptop.json"
+        beta = json.loads(beta_path.read_text(encoding="utf-8"))
+        beta["sample"]["reviews_analyzed"] = 3
+        beta["sample"]["review_ids"].append("beta_laptop_review_003")
+        beta["sample"]["rating_distribution"]["5"] = 2
+        beta["findings"][0]["supporting_review_rate"] = round(1 / 3, 6)
+        beta_payload = _json_bytes(beta)
+        beta_path.write_bytes(beta_payload)
+
+        manifest_path = self.bundle / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["methodology"]["comparison_reviews_per_product"] = 1
+        for entry in manifest["products"]:
+            if entry["product_id"] == "beta_laptop":
+                entry["sha256"] = hashlib.sha256(beta_payload).hexdigest()
+        manifest_path.write_bytes(_json_bytes(manifest))
+
+        with TestClient(create_app(self.bundle)) as client:
+            response = client.post(
+                "/api/compare",
+                json={
+                    "left_product_id": "alpha_laptop",
+                    "right_product_id": "beta_laptop",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["cohort_size_per_product"], 1)
+        self.assertEqual(
+            [item["sample"]["source_reviews_analyzed"] for item in payload["products"]],
+            [2, 3],
+        )
+        self.assertEqual(
+            payload["aligned_issues"][0]["left"]["negative"][
+                "supporting_review_rate"
+            ],
+            1.0,
+        )
+        self.assertEqual(
+            payload["aligned_issues"][0]["right"]["negative"][
+                "supporting_review_rate"
+            ],
+            1.0,
+        )
 
     def test_unknown_product_and_finding_return_not_found(self) -> None:
         with TestClient(create_app(self.bundle)) as client:

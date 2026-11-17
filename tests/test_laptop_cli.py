@@ -11,6 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 TAXONOMY = {"display": {"screen_quality": "display quality"}}
 PRODUCT_CONFIG = "configs/products/hp_chromebook_14.json"
 CATALOG_CONFIG = "configs/catalogs/laptop_catalog_v1.json"
+CATALOG_V2_CONFIG = "configs/catalogs/laptop_catalog_v2.json"
 DEMO_CONFIG = "configs/demo/featured_laptops_v1.json"
 
 
@@ -99,6 +100,27 @@ class LaptopCliDispatchTests(unittest.TestCase):
             catalog_config=CATALOG_CONFIG,
         )
 
+    def test_catalog_promote_reuses_local_checkpoint(self):
+        expected = {"status": "frozen_transfer_demo_catalog"}
+        with mock.patch(
+            "reviewlens_ef.catalog_collection.promote_laptop_catalog",
+            return_value=expected,
+        ) as promoter:
+            result = run_mode(
+                "laptop-catalog-promote",
+                PROJECT_ROOT,
+                TAXONOMY,
+                "unused-model",
+                catalog_config=CATALOG_V2_CONFIG,
+                source_catalog_config=CATALOG_CONFIG,
+            )
+        self.assertEqual(expected, result)
+        promoter.assert_called_once_with(
+            project_root=PROJECT_ROOT.resolve(),
+            source_catalog_config=CATALOG_CONFIG,
+            target_catalog_config=CATALOG_V2_CONFIG,
+        )
+
     def test_featured_precompute_uses_frozen_demo_contract(self):
         expected = {"status": "featured_precompute_complete"}
         with mock.patch(
@@ -152,13 +174,30 @@ class LaptopCliDispatchTests(unittest.TestCase):
             run_mode(
                 "laptop-catalog-expand", PROJECT_ROOT, TAXONOMY, "unused-model"
             )
-        with self.assertRaisesRegex(ValueError, "only for laptop-catalog-expand"):
+        with self.assertRaisesRegex(ValueError, "only for catalog expansion"):
             run_mode(
                 "laptop-catalog",
                 PROJECT_ROOT,
                 TAXONOMY,
                 "unused-model",
                 catalog_config=CATALOG_CONFIG,
+            )
+        with self.assertRaisesRegex(ValueError, "source-catalog-config is required"):
+            run_mode(
+                "laptop-catalog-promote",
+                PROJECT_ROOT,
+                TAXONOMY,
+                "unused-model",
+                catalog_config=CATALOG_V2_CONFIG,
+            )
+        with self.assertRaisesRegex(ValueError, "only for laptop-catalog-promote"):
+            run_mode(
+                "laptop-catalog-expand",
+                PROJECT_ROOT,
+                TAXONOMY,
+                "unused-model",
+                catalog_config=CATALOG_CONFIG,
+                source_catalog_config=CATALOG_CONFIG,
             )
         with self.assertRaisesRegex(ValueError, "demo-config is required"):
             run_mode(
@@ -184,9 +223,10 @@ class LaptopCliDispatchTests(unittest.TestCase):
             text=True,
         )
         for token in (
-            "laptop-catalog", "laptop-catalog-expand", "laptop-pilot",
+            "laptop-catalog", "laptop-catalog-expand", "laptop-catalog-promote",
+            "laptop-pilot",
             "laptop-summary", "laptop-demo-precompute", "--product-config",
-            "--catalog-config", "--demo-config"
+            "--catalog-config", "--source-catalog-config", "--demo-config"
         ):
             self.assertIn(token, completed.stdout)
 

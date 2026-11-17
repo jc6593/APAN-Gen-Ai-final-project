@@ -56,10 +56,11 @@ def claim(observation_id, mapping_status, attribution, quote, *, category=None,
     }
 
 
-def make_fixture(root):
+def make_fixture(root, sample_sizes=None):
+    sample_sizes = tuple(sample_sizes or (30,) * 6)
     featured = []
     results = []
-    for product_number in range(6):
+    for product_number, sample_size in enumerate(sample_sizes):
         product_id = f"laptop_{product_number}"
         config_path = root / "configs" / "products" / f"{product_id}.json"
         config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -75,10 +76,14 @@ def make_fixture(root):
                 "benchmark_source_product" if product_number == 0 else "transfer_demo"
             ),
             cohort_status="frozen_30",
+            presentation_name=f"Laptop {product_number}",
+            reviews_to_analyze=sample_size,
         ))
         output_dir = root / "outputs" / product_id
         run_dir = output_dir / "evidence_first" / "runs" / "fingerprint"
-        review_ids = [f"{product_id}_r{number:02d}" for number in range(30)]
+        review_ids = [
+            f"{product_id}_r{number:02d}" for number in range(sample_size)
+        ]
         reviews = [
             {
                 "review_id": review_id,
@@ -172,6 +177,7 @@ def make_fixture(root):
         bundle_output_directory="outputs/demo_bundle",
         config_path=str(demo_path.relative_to(root)),
         config_sha256=demo_hash,
+        comparison_reviews_per_product=min(sample_sizes),
     )
     return demo_config, results
 
@@ -196,6 +202,7 @@ class DemoBundleTests(unittest.TestCase):
             self.assertEqual("benchmark", product["product"]["role"])
             self.assertEqual("frozen_30", product["product"]["status"])
             self.assertEqual(30, product["sample"]["reviews_analyzed"])
+            self.assertEqual(30, product["sample"]["available_review_count"])
             self.assertEqual(30, sum(product["sample"]["rating_distribution"].values()))
             self.assertEqual(0.066667, product["coverage"]["mapped_review_coverage"])
 
@@ -245,6 +252,52 @@ class DemoBundleTests(unittest.TestCase):
                 first.product_paths[0].read_bytes(), second.product_paths[0].read_bytes()
             )
 
+    def test_variable_report_samples_keep_a_smaller_equal_comparison_cohort(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config, results = make_fixture(root, sample_sizes=(30, 20))
+            built = build_demo_bundle(root, config, results)
+            manifest = json.loads(built.manifest_path.read_text(encoding="utf-8"))
+
+            self.assertEqual(2, manifest["methodology"]["featured_product_count"])
+            self.assertIsNone(manifest["methodology"]["reviews_per_product"])
+            self.assertEqual(
+                {"laptop_0": 30, "laptop_1": 20},
+                manifest["methodology"]["reviews_per_product_by_id"],
+            )
+            self.assertEqual(
+                20, manifest["methodology"]["comparison_reviews_per_product"]
+            )
+            self.assertEqual(
+                20,
+                json.loads(built.product_paths[1].read_text(encoding="utf-8"))[
+                    "sample"
+                ]["reviews_analyzed"],
+            )
+            verify_demo_bundle(root, output_directory=config.bundle_output_directory)
+
+    def test_finding_evidence_prefers_distinct_supporting_reviews(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config, results = make_fixture(root, sample_sizes=(3, 3))
+            claims_path = Path(results[0]["paths"]["claims"])
+            rows = [json.loads(line) for line in claims_path.read_text().splitlines()]
+            rows[0]["accepted_claims"].append(claim(
+                "O003", "mapped", "current_product", "Service was slow.",
+                category="display", issue_group="screen_quality",
+            ))
+            write_jsonl(claims_path, rows)
+
+            built = build_demo_bundle(root, config, results)
+            product = json.loads(built.product_paths[0].read_text(encoding="utf-8"))
+            evidence_rows = product["findings"][0]["evidence"]
+
+            self.assertEqual(3, len(evidence_rows))
+            self.assertEqual(
+                ["laptop_0_r00", "laptop_0_r01"],
+                [item["review_id"] for item in evidence_rows[:2]],
+            )
+
     def test_tampering_is_detected_and_never_overwritten(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -269,20 +322,24 @@ class DemoBundleTests(unittest.TestCase):
                 build_demo_bundle(root, config, results)
             self.assertFalse((root / config.bundle_output_directory).exists())
 
-    def test_requires_six_products_and_uniform_n30(self):
+    def test_requires_at_least_two_products_and_matching_product_cohorts(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             config, results = make_fixture(root)
             short_config = SimpleNamespace(**{
-                **vars(config), "products": config.products[:5],
+                **vars(config), "products": config.products[:1],
             })
-            with self.assertRaisesRegex(DemoBundleError, "exactly six"):
-                build_demo_bundle(root, short_config, results[:5])
-            wrong_n = SimpleNamespace(**{
-                **vars(config), "reviews_per_product": 29,
+            with self.assertRaisesRegex(DemoBundleError, "2-16"):
+                build_demo_bundle(root, short_config, results[:1])
+            mismatched_product = SimpleNamespace(**{
+                **vars(config.products[0]), "reviews_to_analyze": 29,
             })
-            with self.assertRaisesRegex(DemoBundleError, "at 30"):
-                build_demo_bundle(root, wrong_n, results)
+            wrong_cohort = SimpleNamespace(**{
+                **vars(config),
+                "products": (mismatched_product, *config.products[1:]),
+            })
+            with self.assertRaisesRegex(DemoBundleError, "expected 29"):
+                build_demo_bundle(root, wrong_cohort, results)
 
 
 if __name__ == "__main__":
