@@ -1,0 +1,76 @@
+{
+  "schema_version": "reviewlens.taxonomy.laptop.v1",
+  "taxonomy_id": "laptop_v1",
+  "category": "laptop",
+  "issue_groups": {
+    "performance": {
+      "slow_performance": "lag, slow performance or poor responsiveness",
+      "processing_capability": "processor/graphics ability to handle tasks or games",
+      "startup_speed": "boot/startup speed of this device"
+    },
+    "system_stability": {
+      "freezing_crashing": "freezing, crashes or blue-screen failures",
+      "boot_failure": "failure to boot, repeated restarts",
+      "other_stability": "other concrete stability failure"
+    },
+    "battery": {
+      "battery_runtime": "battery life per charge",
+      "charging": "charging speed, charger or charging failure"
+    },
+    "display": {
+      "screen_quality": "resolution, brightness, color or display quality",
+      "screen_size": "screen size or usable viewing area",
+      "touchscreen": "touchscreen capability or function"
+    },
+    "audio": {
+      "low_volume": "speaker volume too low or too loud",
+      "speaker_sound": "speaker audio quality or failure",
+      "audio_connectivity": "headphone/microphone/audio port issues"
+    },
+    "input_devices": {
+      "keyboard": "keyboard key or backlight experience",
+      "touchpad_mouse": "built-in touchpad, cursor or pointer experience"
+    },
+    "connectivity_ports": {
+      "printer_connection": "computer fails to connect to a printer",
+      "wifi_bluetooth": "wireless connection problems or strengths",
+      "usb_other_ports": "USB, SD-card, HDMI and other physical ports",
+      "other_connectivity": "other concrete connectivity issues"
+    },
+    "software_os": {
+      "s_mode_restriction": "Windows S Mode limitation",
+      "app_compatibility": "applications unavailable, blocked, or incompatible",
+      "os_setup": "OS setup/configuration or OS features"
+    },
+    "memory_storage": {
+      "ram_capacity": "RAM amount or memory adequacy",
+      "storage_capacity": "SSD/HDD capacity or space",
+      "upgradeability": "adding or replacing RAM / storage",
+      "storage_performance": "storage device speed and behavior"
+    },
+    "build_quality": {
+      "hinge_assembly": "hinge, adjacent plastic cracking, or screen-motion resistance from one hinge defect",
+      "housing_damage": "casing, chassis, lid or physical damage",
+      "sticker_residue": "packaging sticker or adhesive residue on chassis",
+      "durability": "other concrete materials or durability concern"
+    },
+    "design_portability": {
+      "weight": "weight and travel portability",
+      "appearance": "appearance, color, thinness and design aesthetics",
+      "dimensions": "dimensions, fit, carrying convenience"
+    },
+    "price_value": {
+      "price": "price itself",
+      "value_for_money": "value relative to what the product offers"
+    },
+    "purchase_service": {
+      "listing_accuracy": "misleading seller listing or stated specifications",
+      "delivery_damage": "delivery/packaging condition on arrival",
+      "support_service": "concrete seller/manufacturer support interaction",
+      "return_warranty": "returns, warranty, or repair service event"
+    },
+    "other": {
+      "other_specific": "specific and supported issue not covered above; flagged for review"
+    }
+  }
+}

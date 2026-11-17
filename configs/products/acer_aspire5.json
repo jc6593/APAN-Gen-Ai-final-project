@@ -1,0 +1,28 @@
+{
+  "schema_version": "reviewlens.product_config.v1",
+  "product_id": "acer_aspire5",
+  "category": "laptop",
+  "catalog_scope": "canonical_product",
+  "product_family": {
+    "display_name": "Acer Aspire 5 Slim Laptop",
+    "model_label": "A515-43-R19L",
+    "parent_asin": "B0C2ZMJW53",
+    "allowed_child_asins": ["B07RF1XD36"]
+  },
+  "source": {
+    "reviews_jsonl": "data/processed/amazon/acer_aspire5_reviews_clean.jsonl"
+  },
+  "taxonomy": {
+    "config_path": "configs/taxonomies/laptop_v1.json",
+    "schema_version": "reviewlens.taxonomy.laptop.v1"
+  },
+  "selection": {
+    "strategy": "rating_round_robin_v1",
+    "seed": 5560,
+    "default_limit": 10,
+    "pilot_review_ids": []
+  },
+  "output": {
+    "directory": "outputs/laptops/acer_aspire5"
+  }
+}

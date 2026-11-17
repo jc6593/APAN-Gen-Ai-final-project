@@ -1,0 +1,5 @@
+{
+  "catalog_id": "laptop_catalog_v1",
+  "manifest_path": "data/processed/amazon/laptop_catalog_v1/catalog_manifest.json",
+  "manifest_sha256": "3a0bdb74104e50acc48b9da7f0673706bbe99b2db7f4e12743f5d072ced79cf0"
+}

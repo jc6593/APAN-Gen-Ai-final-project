@@ -1,0 +1,641 @@
+{
+  "atomic_and_abstention_diagnostics": {
+    "mapped_atomic": {
+      "components": {
+        "atomic": {
+          "no": 3,
+          "rate": 0.909091,
+          "total": 33,
+          "yes": 30
+        },
+        "category_correct": {
+          "no": 6,
+          "rate": 0.818182,
+          "total": 33,
+          "yes": 27
+        },
+        "sentiment_correct": {
+          "no": 1,
+          "rate": 0.969697,
+          "total": 33,
+          "yes": 32
+        },
+        "supported": {
+          "no": 0,
+          "rate": 1.0,
+          "total": 33,
+          "yes": 33
+        },
+        "target_correct": {
+          "no": 0,
+          "rate": 1.0,
+          "total": 33,
+          "yes": 33
+        }
+      },
+      "rows": 33,
+      "strict_fully_correct": {
+        "no": 7,
+        "rate": 0.787879,
+        "total": 33,
+        "yes": 26
+      }
+    },
+    "unmapped_abstentions": {
+      "correct_abstention": {
+        "no": 25,
+        "rate": 0.479167,
+        "yes": 23
+      },
+      "expected_pair_labeled": 25,
+      "rows": 48,
+      "should_map": {
+        "no": 23,
+        "rate": 0.520833,
+        "yes": 25
+      },
+      "statement_type_correct": {
+        "no": 9,
+        "rate": 0.8125,
+        "yes": 39
+      }
+    }
+  },
+  "cohort_label": "internal_locked_validation_not_external_test",
+  "completion_and_failures": {
+    "evidence_first": {
+      "accepted_observations": 81,
+      "claim_failure_review_ids": [],
+      "claim_parse_failures": 0,
+      "claim_parse_success": 15,
+      "mapped_atomic_claims": 33,
+      "merged_business_findings": 30,
+      "observation_failure_review_ids": [],
+      "observation_parse_failures": 0,
+      "observation_parse_success": 15,
+      "rejected_observations": 20,
+      "reviews": 15,
+      "unmapped_atomic_claims": 48
+    },
+    "v3": {
+      "business_findings": 52,
+      "failure_review_ids": [
+        "electronics_1807797"
+      ],
+      "parse_failures": 1,
+      "parse_success": 14,
+      "reviews": 15
+    }
+  },
+  "counts": {
+    "blind_primary_items": 82,
+    "diagnostic_atomic_claims": 81,
+    "gold_full_tuples": 60,
+    "reviews": 15
+  },
+  "exact_signature_precision_proxy": {
+    "evidence_first": {
+      "exact_signature_hits": 25,
+      "note": "Conservative exact-tuple proxy, not the blinded primary precision metric.",
+      "predicted_findings": 30,
+      "rate": 0.833333
+    },
+    "v3": {
+      "exact_signature_hits": 32,
+      "note": "Conservative exact-tuple proxy, not the blinded primary precision metric.",
+      "predicted_findings": 52,
+      "rate": 0.615385
+    }
+  },
+  "gold_recall": {
+    "evidence_first": {
+      "full_tuple": {
+        "macro_nonempty_gold_reviews": {
+          "excluded_zero_gold_reviews": 1,
+          "rate": 0.500397,
+          "reviews": 14
+        },
+        "micro": {
+          "gold": 60,
+          "hits": 25,
+          "rate": 0.416667
+        }
+      },
+      "issue_pair": {
+        "macro_nonempty_gold_reviews": {
+          "excluded_zero_gold_reviews": 1,
+          "rate": 0.527778,
+          "reviews": 14
+        },
+        "micro": {
+          "gold": 56,
+          "hits": 26,
+          "rate": 0.464286
+        }
+      },
+      "per_review": [
+        {
+          "full_tuple_gold": 1,
+          "full_tuple_hits": 0,
+          "issue_pair_gold": 1,
+          "issue_pair_hits": 0,
+          "predicted_findings": 0,
+          "rating": 1,
+          "review_id": "electronics_395247"
+        },
+        {
+          "full_tuple_gold": 2,
+          "full_tuple_hits": 2,
+          "issue_pair_gold": 2,
+          "issue_pair_hits": 2,
+          "predicted_findings": 2,
+          "rating": 2,
+          "review_id": "electronics_1046023"
+        },
+        {
+          "full_tuple_gold": 1,
+          "full_tuple_hits": 1,
+          "issue_pair_gold": 1,
+          "issue_pair_hits": 1,
+          "predicted_findings": 1,
+          "rating": 3,
+          "review_id": "electronics_800032"
+        },
+        {
+          "full_tuple_gold": 4,
+          "full_tuple_hits": 2,
+          "issue_pair_gold": 4,
+          "issue_pair_hits": 2,
+          "predicted_findings": 2,
+          "rating": 4,
+          "review_id": "electronics_52771"
+        },
+        {
+          "full_tuple_gold": 0,
+          "full_tuple_hits": 0,
+          "issue_pair_gold": 0,
+          "issue_pair_hits": 0,
+          "predicted_findings": 0,
+          "rating": 5,
+          "review_id": "electronics_1213818"
+        },
+        {
+          "full_tuple_gold": 8,
+          "full_tuple_hits": 6,
+          "issue_pair_gold": 6,
+          "issue_pair_hits": 5,
+          "predicted_findings": 6,
+          "rating": 1,
+          "review_id": "electronics_1549899"
+        },
+        {
+          "full_tuple_gold": 5,
+          "full_tuple_hits": 1,
+          "issue_pair_gold": 5,
+          "issue_pair_hits": 1,
+          "predicted_findings": 1,
+          "rating": 2,
+          "review_id": "electronics_943842"
+        },
+        {
+          "full_tuple_gold": 1,
+          "full_tuple_hits": 1,
+          "issue_pair_gold": 1,
+          "issue_pair_hits": 1,
+          "predicted_findings": 1,
+          "rating": 3,
+          "review_id": "electronics_219260"
+        },
+        {
+          "full_tuple_gold": 2,
+          "full_tuple_hits": 1,
+          "issue_pair_gold": 2,
+          "issue_pair_hits": 1,
+          "predicted_findings": 1,
+          "rating": 4,
+          "review_id": "electronics_1170992"
+        },
+        {
+          "full_tuple_gold": 3,
+          "full_tuple_hits": 1,
+          "issue_pair_gold": 3,
+          "issue_pair_hits": 1,
+          "predicted_findings": 2,
+          "rating": 5,
+          "review_id": "electronics_830445"
+        },
+        {
+          "full_tuple_gold": 10,
+          "full_tuple_hits": 2,
+          "issue_pair_gold": 9,
+          "issue_pair_hits": 2,
+          "predicted_findings": 2,
+          "rating": 1,
+          "review_id": "electronics_1807797"
+        },
+        {
+          "full_tuple_gold": 5,
+          "full_tuple_hits": 2,
+          "issue_pair_gold": 5,
+          "issue_pair_hits": 2,
+          "predicted_findings": 2,
+          "rating": 2,
+          "review_id": "electronics_1444882"
+        },
+        {
+          "full_tuple_gold": 4,
+          "full_tuple_hits": 2,
+          "issue_pair_gold": 4,
+          "issue_pair_hits": 2,
+          "predicted_findings": 3,
+          "rating": 3,
+          "review_id": "electronics_502169"
+        },
+        {
+          "full_tuple_gold": 5,
+          "full_tuple_hits": 2,
+          "issue_pair_gold": 5,
+          "issue_pair_hits": 2,
+          "predicted_findings": 2,
+          "rating": 4,
+          "review_id": "electronics_956109"
+        },
+        {
+          "full_tuple_gold": 9,
+          "full_tuple_hits": 2,
+          "issue_pair_gold": 8,
+          "issue_pair_hits": 4,
+          "predicted_findings": 5,
+          "rating": 5,
+          "review_id": "electronics_977364"
+        }
+      ],
+      "rating_stratified": {
+        "1": {
+          "full_tuple_gold": 19,
+          "full_tuple_hits": 8,
+          "full_tuple_recall": 0.421053,
+          "issue_pair_gold": 16,
+          "issue_pair_hits": 7,
+          "issue_pair_recall": 0.4375
+        },
+        "2": {
+          "full_tuple_gold": 12,
+          "full_tuple_hits": 5,
+          "full_tuple_recall": 0.416667,
+          "issue_pair_gold": 12,
+          "issue_pair_hits": 5,
+          "issue_pair_recall": 0.416667
+        },
+        "3": {
+          "full_tuple_gold": 6,
+          "full_tuple_hits": 4,
+          "full_tuple_recall": 0.666667,
+          "issue_pair_gold": 6,
+          "issue_pair_hits": 4,
+          "issue_pair_recall": 0.666667
+        },
+        "4": {
+          "full_tuple_gold": 11,
+          "full_tuple_hits": 5,
+          "full_tuple_recall": 0.454545,
+          "issue_pair_gold": 11,
+          "issue_pair_hits": 5,
+          "issue_pair_recall": 0.454545
+        },
+        "5": {
+          "full_tuple_gold": 12,
+          "full_tuple_hits": 3,
+          "full_tuple_recall": 0.25,
+          "issue_pair_gold": 11,
+          "issue_pair_hits": 5,
+          "issue_pair_recall": 0.454545
+        }
+      }
+    },
+    "v3": {
+      "full_tuple": {
+        "macro_nonempty_gold_reviews": {
+          "excluded_zero_gold_reviews": 1,
+          "rate": 0.665079,
+          "reviews": 14
+        },
+        "micro": {
+          "gold": 60,
+          "hits": 32,
+          "rate": 0.533333
+        }
+      },
+      "issue_pair": {
+        "macro_nonempty_gold_reviews": {
+          "excluded_zero_gold_reviews": 1,
+          "rate": 0.746429,
+          "reviews": 14
+        },
+        "micro": {
+          "gold": 56,
+          "hits": 36,
+          "rate": 0.642857
+        }
+      },
+      "per_review": [
+        {
+          "full_tuple_gold": 1,
+          "full_tuple_hits": 1,
+          "issue_pair_gold": 1,
+          "issue_pair_hits": 1,
+          "predicted_findings": 2,
+          "rating": 1,
+          "review_id": "electronics_395247"
+        },
+        {
+          "full_tuple_gold": 2,
+          "full_tuple_hits": 2,
+          "issue_pair_gold": 2,
+          "issue_pair_hits": 2,
+          "predicted_findings": 2,
+          "rating": 2,
+          "review_id": "electronics_1046023"
+        },
+        {
+          "full_tuple_gold": 1,
+          "full_tuple_hits": 1,
+          "issue_pair_gold": 1,
+          "issue_pair_hits": 1,
+          "predicted_findings": 1,
+          "rating": 3,
+          "review_id": "electronics_800032"
+        },
+        {
+          "full_tuple_gold": 4,
+          "full_tuple_hits": 1,
+          "issue_pair_gold": 4,
+          "issue_pair_hits": 3,
+          "predicted_findings": 4,
+          "rating": 4,
+          "review_id": "electronics_52771"
+        },
+        {
+          "full_tuple_gold": 0,
+          "full_tuple_hits": 0,
+          "issue_pair_gold": 0,
+          "issue_pair_hits": 0,
+          "predicted_findings": 1,
+          "rating": 5,
+          "review_id": "electronics_1213818"
+        },
+        {
+          "full_tuple_gold": 8,
+          "full_tuple_hits": 6,
+          "issue_pair_gold": 6,
+          "issue_pair_hits": 5,
+          "predicted_findings": 6,
+          "rating": 1,
+          "review_id": "electronics_1549899"
+        },
+        {
+          "full_tuple_gold": 5,
+          "full_tuple_hits": 3,
+          "issue_pair_gold": 5,
+          "issue_pair_hits": 3,
+          "predicted_findings": 5,
+          "rating": 2,
+          "review_id": "electronics_943842"
+        },
+        {
+          "full_tuple_gold": 1,
+          "full_tuple_hits": 1,
+          "issue_pair_gold": 1,
+          "issue_pair_hits": 1,
+          "predicted_findings": 1,
+          "rating": 3,
+          "review_id": "electronics_219260"
+        },
+        {
+          "full_tuple_gold": 2,
+          "full_tuple_hits": 1,
+          "issue_pair_gold": 2,
+          "issue_pair_hits": 1,
+          "predicted_findings": 2,
+          "rating": 4,
+          "review_id": "electronics_1170992"
+        },
+        {
+          "full_tuple_gold": 3,
+          "full_tuple_hits": 2,
+          "issue_pair_gold": 3,
+          "issue_pair_hits": 2,
+          "predicted_findings": 4,
+          "rating": 5,
+          "review_id": "electronics_830445"
+        },
+        {
+          "full_tuple_gold": 10,
+          "full_tuple_hits": 0,
+          "issue_pair_gold": 9,
+          "issue_pair_hits": 0,
+          "predicted_findings": 0,
+          "rating": 1,
+          "review_id": "electronics_1807797"
+        },
+        {
+          "full_tuple_gold": 5,
+          "full_tuple_hits": 3,
+          "issue_pair_gold": 5,
+          "issue_pair_hits": 3,
+          "predicted_findings": 4,
+          "rating": 2,
+          "review_id": "electronics_1444882"
+        },
+        {
+          "full_tuple_gold": 4,
+          "full_tuple_hits": 2,
+          "issue_pair_gold": 4,
+          "issue_pair_hits": 3,
+          "predicted_findings": 3,
+          "rating": 3,
+          "review_id": "electronics_502169"
+        },
+        {
+          "full_tuple_gold": 5,
+          "full_tuple_hits": 5,
+          "issue_pair_gold": 5,
+          "issue_pair_hits": 5,
+          "predicted_findings": 8,
+          "rating": 4,
+          "review_id": "electronics_956109"
+        },
+        {
+          "full_tuple_gold": 9,
+          "full_tuple_hits": 4,
+          "issue_pair_gold": 8,
+          "issue_pair_hits": 6,
+          "predicted_findings": 9,
+          "rating": 5,
+          "review_id": "electronics_977364"
+        }
+      ],
+      "rating_stratified": {
+        "1": {
+          "full_tuple_gold": 19,
+          "full_tuple_hits": 7,
+          "full_tuple_recall": 0.368421,
+          "issue_pair_gold": 16,
+          "issue_pair_hits": 6,
+          "issue_pair_recall": 0.375
+        },
+        "2": {
+          "full_tuple_gold": 12,
+          "full_tuple_hits": 8,
+          "full_tuple_recall": 0.666667,
+          "issue_pair_gold": 12,
+          "issue_pair_hits": 8,
+          "issue_pair_recall": 0.666667
+        },
+        "3": {
+          "full_tuple_gold": 6,
+          "full_tuple_hits": 4,
+          "full_tuple_recall": 0.666667,
+          "issue_pair_gold": 6,
+          "issue_pair_hits": 5,
+          "issue_pair_recall": 0.833333
+        },
+        "4": {
+          "full_tuple_gold": 11,
+          "full_tuple_hits": 7,
+          "full_tuple_recall": 0.636364,
+          "issue_pair_gold": 11,
+          "issue_pair_hits": 9,
+          "issue_pair_recall": 0.818182
+        },
+        "5": {
+          "full_tuple_gold": 12,
+          "full_tuple_hits": 6,
+          "full_tuple_recall": 0.5,
+          "issue_pair_gold": 11,
+          "issue_pair_hits": 8,
+          "issue_pair_recall": 0.727273
+        }
+      }
+    }
+  },
+  "improvement_gate": {
+    "decision": "precision_recall_tradeoff",
+    "full_tuple_recall_delta": -0.116666,
+    "full_tuple_recall_not_lower": false,
+    "passed": false,
+    "rule": "strict v1.5 finding precision must exceed v3 and end-to-end full-tuple micro recall must not be lower",
+    "strict_precision_delta": 0.208975,
+    "strict_precision_improved": true
+  },
+  "input_hashes": {
+    "baseline_v3_sha256": "6fdfeeb7c08c8f22fee3ca3dc40b21ac9bd41d9ec0cd82c4a946a835fdaff0c9",
+    "blind_items_sha256": "89d8a85540898ea35fa134c61105982f51db871f9a9d205e36d2741bacad5975",
+    "claims_sha256": "9c5488b7c50294f07329d3a00b14847b1f84142ef6666960202c74abf5cd89af",
+    "completion_manifest_sha256": "1c28e3918c3f425c9be945eb9c55f602864777dd3ba4c795aec555253ab31295",
+    "diagnostic_labels_sha256": "cbbdbbea878e2f2eb8eecf42e72f8ef8abc8ae83c692855518587387b10f2248",
+    "gold_reference_sha256": "25cd71a745a4b030bf4c5afa09c05203857efb9f5bae115cfe289ff7ba912985",
+    "observations_sha256": "58a710b03200a0fd21531b5d3c067dab09e2ebeb72c4e07e8254133dd7cffc51",
+    "precision_labels_sha256": "163563dcf095fa6c42e78b7f9c195f4e20753417f08d1522103b1e30744d43ad",
+    "run_manifest_sha256": "e1deeecfe0f436c7928c263420452e89b7adc56f1c804a69f51f94011d9d35c5",
+    "selection_manifest_sha256": "9f0da493d55374273689e47db6676645a7a3d71074cbad9c461e4a3322633470"
+  },
+  "primary_strict_precision": {
+    "evidence_first": {
+      "components": {
+        "category_correct": {
+          "no": 6,
+          "rate": 0.8,
+          "total": 30,
+          "yes": 24
+        },
+        "sentiment_correct": {
+          "no": 1,
+          "rate": 0.966667,
+          "total": 30,
+          "yes": 29
+        },
+        "supported": {
+          "no": 0,
+          "rate": 1.0,
+          "total": 30,
+          "yes": 30
+        },
+        "target_correct": {
+          "no": 0,
+          "rate": 1.0,
+          "total": 30,
+          "yes": 30
+        }
+      },
+      "rows": 30,
+      "strict_fully_correct": {
+        "no": 7,
+        "rate": 0.766667,
+        "total": 30,
+        "yes": 23
+      }
+    },
+    "v3": {
+      "components": {
+        "category_correct": {
+          "no": 16,
+          "rate": 0.692308,
+          "total": 52,
+          "yes": 36
+        },
+        "sentiment_correct": {
+          "no": 6,
+          "rate": 0.884615,
+          "total": 52,
+          "yes": 46
+        },
+        "supported": {
+          "no": 9,
+          "rate": 0.826923,
+          "total": 52,
+          "yes": 43
+        },
+        "target_correct": {
+          "no": 2,
+          "rate": 0.961538,
+          "total": 52,
+          "yes": 50
+        }
+      },
+      "rows": 52,
+      "strict_fully_correct": {
+        "no": 23,
+        "rate": 0.557692,
+        "total": 52,
+        "yes": 29
+      }
+    }
+  },
+  "reporting_limits": [
+    "report raw numerators and denominators",
+    "no significance or population-prevalence claim from n=15",
+    "blind and shuffle system identity for v3 versus v1.5 annotation",
+    "generate annotation sheets only after all 15 final claims complete",
+    "no tuning after final inference"
+  ],
+  "schema_version": "reviewlens_v15_final_evaluation_v1",
+  "selected_review_ids": [
+    "electronics_395247",
+    "electronics_1046023",
+    "electronics_800032",
+    "electronics_52771",
+    "electronics_1213818",
+    "electronics_1549899",
+    "electronics_943842",
+    "electronics_219260",
+    "electronics_1170992",
+    "electronics_830445",
+    "electronics_1807797",
+    "electronics_1444882",
+    "electronics_502169",
+    "electronics_956109",
+    "electronics_977364"
+  ],
+  "status": "complete_locked_evaluation"
+}

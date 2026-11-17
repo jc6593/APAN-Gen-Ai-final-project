@@ -1,0 +1,37 @@
+{
+  "catalog_scope": "product_family",
+  "category": "laptop",
+  "output": {
+    "directory": "outputs/laptops/apple_macbook_air_b0b4f9h4df"
+  },
+  "product_family": {
+    "allowed_child_asins": [
+      "B0B3BVKXH8",
+      "B0B3BVWJ6Y",
+      "B0B3C2R8MP",
+      "B0B3C5H787",
+      "B0B3C5HTGG",
+      "B0B3C7MJX3",
+      "B0B3CDZLTB",
+      "B0B3CGXWN4"
+    ],
+    "display_name": "Apple 2022 MacBook Air",
+    "model_label": "Apple 2022 MacBook Air family",
+    "parent_asin": "B0B4F9H4DF"
+  },
+  "product_id": "apple_macbook_air_b0b4f9h4df",
+  "schema_version": "reviewlens.product_config.v1",
+  "selection": {
+    "default_limit": 30,
+    "pilot_review_ids": [],
+    "seed": 5560,
+    "strategy": "rating_round_robin_v1"
+  },
+  "source": {
+    "reviews_jsonl": "data/processed/amazon/laptop_catalog_v1/products/apple_macbook_air_b0b4f9h4df/reviews.jsonl"
+  },
+  "taxonomy": {
+    "config_path": "configs/taxonomies/laptop_v1.json",
+    "schema_version": "reviewlens.taxonomy.laptop.v1"
+  }
+}

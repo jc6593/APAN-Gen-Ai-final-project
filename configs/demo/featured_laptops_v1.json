@@ -1,0 +1,61 @@
+{
+  "schema_version": "reviewlens.featured_demo_config.v1",
+  "demo_id": "featured_laptops_v1",
+  "reviews_per_product": 30,
+  "models": {
+    "layer1": {
+      "model_id": "Qwen/Qwen3-1.7B-MLX-4bit",
+      "revision": "21457c6f51ed54a7c16e988c0844db973815c137"
+    },
+    "layer2": {
+      "model_id": "mlx-community/Qwen3-4B-Instruct-2507-4bit",
+      "revision": "50d427756c6b1b2fe0c0a10f67fbda1fc8e82c1b"
+    }
+  },
+  "products": [
+    {
+      "config_path": "configs/products/acer_aspire5.json",
+      "brand": "Acer",
+      "operating_system": "Windows",
+      "evaluation_status": "benchmark_source_product",
+      "cohort_status": "demo_cohort_not_separately_evaluated"
+    },
+    {
+      "config_path": "configs/products/laptop_catalog_v1/apple_macbook_air_b0b4f9h4df.json",
+      "brand": "Apple",
+      "operating_system": "macOS",
+      "evaluation_status": "transfer_demo",
+      "cohort_status": "product_specific_accuracy_not_established"
+    },
+    {
+      "config_path": "configs/products/laptop_catalog_v1/apple_macbook_pro_b09jvv47bx.json",
+      "brand": "Apple",
+      "operating_system": "macOS",
+      "evaluation_status": "transfer_demo",
+      "cohort_status": "product_specific_accuracy_not_established"
+    },
+    {
+      "config_path": "configs/products/laptop_catalog_v1/acer_chromebook_b0c39lsl4l.json",
+      "brand": "Acer",
+      "operating_system": "ChromeOS",
+      "evaluation_status": "transfer_demo",
+      "cohort_status": "product_specific_accuracy_not_established"
+    },
+    {
+      "config_path": "configs/products/laptop_catalog_v1/hp_laptop_b096x5yyzm.json",
+      "brand": "HP",
+      "operating_system": "Windows",
+      "evaluation_status": "transfer_demo",
+      "cohort_status": "product_specific_accuracy_not_established"
+    },
+    {
+      "config_path": "configs/products/laptop_catalog_v1/lenovo_ideapad_b00k6zigg4.json",
+      "brand": "Lenovo",
+      "operating_system": "Windows",
+      "evaluation_status": "transfer_demo",
+      "cohort_status": "product_specific_accuracy_not_established"
+    }
+  ],
+  "max_retries": 1,
+  "bundle_output_directory": "demo_bundle"
+}

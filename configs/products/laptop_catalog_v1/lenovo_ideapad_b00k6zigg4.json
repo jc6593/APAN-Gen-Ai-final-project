@@ -1,0 +1,30 @@
+{
+  "catalog_scope": "product_family",
+  "category": "laptop",
+  "output": {
+    "directory": "outputs/laptops/lenovo_ideapad_b00k6zigg4"
+  },
+  "product_family": {
+    "allowed_child_asins": [
+      "B00K6ZIGG4"
+    ],
+    "display_name": "Lenovo Laptop IdeaPad G50 (59421808) Intel Core i7 4510U (2.00 GHz) 8 GB Memory 1 TB HDD Intel",
+    "model_label": "Lenovo Laptop IdeaPad G50 (59421808) Intel Core i7 4510U (2.00 GHz) 8 GB Memory 1 TB HDD Intel family",
+    "parent_asin": "B00K6ZIGG4"
+  },
+  "product_id": "lenovo_ideapad_b00k6zigg4",
+  "schema_version": "reviewlens.product_config.v1",
+  "selection": {
+    "default_limit": 30,
+    "pilot_review_ids": [],
+    "seed": 5560,
+    "strategy": "rating_round_robin_v1"
+  },
+  "source": {
+    "reviews_jsonl": "data/processed/amazon/laptop_catalog_v1/products/lenovo_ideapad_b00k6zigg4/reviews.jsonl"
+  },
+  "taxonomy": {
+    "config_path": "configs/taxonomies/laptop_v1.json",
+    "schema_version": "reviewlens.taxonomy.laptop.v1"
+  }
+}

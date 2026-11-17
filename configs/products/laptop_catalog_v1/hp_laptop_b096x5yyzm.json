@@ -1,0 +1,30 @@
+{
+  "catalog_scope": "product_family",
+  "category": "laptop",
+  "output": {
+    "directory": "outputs/laptops/hp_laptop_b096x5yyzm"
+  },
+  "product_family": {
+    "allowed_child_asins": [
+      "B091D9652Z"
+    ],
+    "display_name": "HP 14 Laptop, AMD Ryzen 5 5500U, 8 GB RAM, 256 GB SSD Storage, 14-inch Full HD Display, Windows",
+    "model_label": "HP 14 Laptop, AMD Ryzen 5 5500U, 8 GB RAM, 256 GB SSD Storage, 14-inch Full HD Display, Windows family",
+    "parent_asin": "B096X5YYZM"
+  },
+  "product_id": "hp_laptop_b096x5yyzm",
+  "schema_version": "reviewlens.product_config.v1",
+  "selection": {
+    "default_limit": 30,
+    "pilot_review_ids": [],
+    "seed": 5560,
+    "strategy": "rating_round_robin_v1"
+  },
+  "source": {
+    "reviews_jsonl": "data/processed/amazon/laptop_catalog_v1/products/hp_laptop_b096x5yyzm/reviews.jsonl"
+  },
+  "taxonomy": {
+    "config_path": "configs/taxonomies/laptop_v1.json",
+    "schema_version": "reviewlens.taxonomy.laptop.v1"
+  }
+}

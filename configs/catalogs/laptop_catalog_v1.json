@@ -1,0 +1,34 @@
+{
+  "schema_version": "reviewlens.laptop_catalog_build.v1",
+  "catalog_id": "laptop_catalog_v1",
+  "category": "laptop",
+  "source": {
+    "candidate_metadata_jsonl": "data/processed/amazon/laptop_candidates_preview.jsonl",
+    "review_repository": "McAuley-Lab/Amazon-Reviews-2023",
+    "review_jsonl_path": "raw/review_categories/Electronics.jsonl"
+  },
+  "selection": {
+    "target_new_products": 5,
+    "candidate_pool_size": 36,
+    "minimum_reviews_per_product": 30,
+    "maximum_reviews_per_product": 50,
+    "minimum_text_characters": 40,
+    "maximum_scan_records": 20000000,
+    "checkpoint_interval_records": 100000,
+    "maximum_products_per_brand": 2,
+    "minimum_distinct_brands": 4,
+    "required_operating_systems": ["macos", "chromeos"],
+    "seed": 5560,
+    "include_renewed": false,
+    "excluded_parent_asins": [
+      "B0C2ZMJW53",
+      "B081FY9HRR",
+      "B0B5DFFJ6S"
+    ]
+  },
+  "output": {
+    "directory": "data/processed/amazon/laptop_catalog_v1",
+    "generated_config_directory": "configs/products/laptop_catalog_v1",
+    "generated_default_limit": 30
+  }
+}

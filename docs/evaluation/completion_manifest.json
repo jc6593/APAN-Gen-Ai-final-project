@@ -1,0 +1,27 @@
+{
+  "claims_sha256": "9c5488b7c50294f07329d3a00b14847b1f84142ef6666960202c74abf5cd89af",
+  "created_at_utc": "2026-11-16T05:18:27.735441+00:00",
+  "gold_reference_sha256": "25cd71a745a4b030bf4c5afa09c05203857efb9f5bae115cfe289ff7ba912985",
+  "observations_sha256": "58a710b03200a0fd21531b5d3c067dab09e2ebeb72c4e07e8254133dd7cffc51",
+  "run_manifest_sha256": "e1deeecfe0f436c7928c263420452e89b7adc56f1c804a69f51f94011d9d35c5",
+  "schema_version": "reviewlens_v15_final_completion_v1",
+  "selected_review_ids": [
+    "electronics_395247",
+    "electronics_1046023",
+    "electronics_800032",
+    "electronics_52771",
+    "electronics_1213818",
+    "electronics_1549899",
+    "electronics_943842",
+    "electronics_219260",
+    "electronics_1170992",
+    "electronics_830445",
+    "electronics_1807797",
+    "electronics_1444882",
+    "electronics_502169",
+    "electronics_956109",
+    "electronics_977364"
+  ],
+  "selection_manifest_sha256": "9f0da493d55374273689e47db6676645a7a3d71074cbad9c461e4a3322633470",
+  "status": "complete_locked_no_regeneration"
+}

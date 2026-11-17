@@ -1,0 +1,33 @@
+{
+  "schema_version": "reviewlens.product_config.v1",
+  "product_id": "macbook_pro_2019",
+  "category": "laptop",
+  "catalog_scope": "product_family",
+  "product_family": {
+    "display_name": "Apple MacBook Pro 2019",
+    "model_label": "2019 MacBook Pro 16-inch family",
+    "parent_asin": "B081FY9HRR",
+    "allowed_child_asins": [
+      "B081FTNGNC",
+      "B081FV1Y57",
+      "B081FWLDZ2",
+      "B081FZV45H"
+    ]
+  },
+  "source": {
+    "reviews_jsonl": "data/processed/amazon/target_reviews_probe_2m.jsonl"
+  },
+  "taxonomy": {
+    "config_path": "configs/taxonomies/laptop_v1.json",
+    "schema_version": "reviewlens.taxonomy.laptop.v1"
+  },
+  "selection": {
+    "strategy": "rating_round_robin_v1",
+    "seed": 5560,
+    "default_limit": 10,
+    "pilot_review_ids": []
+  },
+  "output": {
+    "directory": "outputs/laptops/macbook_pro_2019"
+  }
+}

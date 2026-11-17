@@ -1,0 +1,35 @@
+{
+  "catalog_scope": "product_family",
+  "category": "laptop",
+  "output": {
+    "directory": "outputs/laptops/apple_macbook_pro_b09jvv47bx"
+  },
+  "product_family": {
+    "allowed_child_asins": [
+      "B09JQK9DK5",
+      "B09JQKBQSB",
+      "B09JQML3NL",
+      "B09JQMW44C",
+      "B09JQP37K3",
+      "B09JQRGJF3"
+    ],
+    "display_name": "Apple 2021 MacBook Pro",
+    "model_label": "Apple 2021 MacBook Pro family",
+    "parent_asin": "B09JVV47BX"
+  },
+  "product_id": "apple_macbook_pro_b09jvv47bx",
+  "schema_version": "reviewlens.product_config.v1",
+  "selection": {
+    "default_limit": 30,
+    "pilot_review_ids": [],
+    "seed": 5560,
+    "strategy": "rating_round_robin_v1"
+  },
+  "source": {
+    "reviews_jsonl": "data/processed/amazon/laptop_catalog_v1/products/apple_macbook_pro_b09jvv47bx/reviews.jsonl"
+  },
+  "taxonomy": {
+    "config_path": "configs/taxonomies/laptop_v1.json",
+    "schema_version": "reviewlens.taxonomy.laptop.v1"
+  }
+}

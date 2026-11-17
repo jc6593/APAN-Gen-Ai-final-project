@@ -1,0 +1,39 @@
+{
+  "schema_version": "reviewlens.product_config.v1",
+  "product_id": "hp_chromebook_14",
+  "category": "laptop",
+  "catalog_scope": "product_family",
+  "product_family": {
+    "display_name": "HP Chromebook 14",
+    "model_label": "HP Chromebook 14 family",
+    "parent_asin": "B0B5DFFJ6S",
+    "allowed_child_asins": ["B099M5J8MP", "B09SVSBVP1"]
+  },
+  "source": {
+    "reviews_jsonl": "data/processed/amazon/target_reviews_probe_2m.jsonl"
+  },
+  "taxonomy": {
+    "config_path": "configs/taxonomies/laptop_v1.json",
+    "schema_version": "reviewlens.taxonomy.laptop.v1"
+  },
+  "selection": {
+    "strategy": "rating_round_robin_v1",
+    "seed": 5560,
+    "default_limit": 10,
+    "pilot_review_ids": [
+      "electronics_99975",
+      "electronics_274208",
+      "electronics_1202809",
+      "electronics_1831057",
+      "electronics_8883",
+      "electronics_569036",
+      "electronics_494451",
+      "electronics_417388",
+      "electronics_535038",
+      "electronics_1516288"
+    ]
+  },
+  "output": {
+    "directory": "outputs/laptops/hp_chromebook_14"
+  }
+}
